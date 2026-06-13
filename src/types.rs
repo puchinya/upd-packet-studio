@@ -44,7 +44,53 @@ pub struct LogEntry {
     pub timestamp: chrono::DateTime<Local>,
     pub direction: LogDirection,
     pub address: SocketAddr,
+    #[serde(skip)]
+    pub address_str: String,
     pub data: Vec<u8>,
+    #[serde(skip)]
+    pub preview_str: String,
+}
+
+impl LogEntry {
+    pub fn new(
+        timestamp: chrono::DateTime<Local>,
+        direction: LogDirection,
+        address: SocketAddr,
+        data: Vec<u8>,
+    ) -> Self {
+        let address_str = address.to_string();
+        let preview_str = match direction {
+            LogDirection::Sent | LogDirection::Received => {
+                let hex_str = data.iter()
+                    .map(|b| format!("{:02X}", b))
+                    .collect::<Vec<String>>()
+                    .join(" ");
+                if hex_str.len() > 80 {
+                    format!("{}...", &hex_str[..77])
+                } else {
+                    hex_str
+                }
+            }
+            LogDirection::SystemInfo | LogDirection::SystemError => {
+                let payload_preview = String::from_utf8_lossy(&data);
+                let preview = payload_preview.replace('\n', " ");
+                if preview.len() > 80 {
+                    format!("{}...", &preview[..77])
+                } else {
+                    preview
+                }
+            }
+        };
+
+        Self {
+            timestamp,
+            direction,
+            address,
+            address_str,
+            data,
+            preview_str,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

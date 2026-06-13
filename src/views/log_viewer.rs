@@ -12,6 +12,7 @@ impl UdpStudioState {
             ui.horizontal(|ui| {
                 if ui.button("🗑 Clear").clicked() {
                     self.logs.clear();
+                    self.filtered_indices.clear();
                     new_selection = None;
                 }
 
@@ -78,7 +79,7 @@ impl UdpStudioState {
                                         LogDirection::SystemInfo => "INFO",
                                         LogDirection::SystemError => "ERROR",
                                     };
-                                    let addr_str = entry.address.to_string();
+                                    let addr_str = &entry.address_str;
                                     let len_str = entry.data.len().to_string();
                                     let hex_str = entry.data.iter().map(|b| format!("{:02X}", b)).collect::<Vec<String>>().join(" ");
                                     let plain_str = String::from_utf8_lossy(&entry.data).replace('\n', " ").replace('"', "\"\"");
@@ -91,20 +92,10 @@ impl UdpStudioState {
 
                         match result {
                             Ok(_) => {
-                                self.logs.push(crate::types::LogEntry {
-                                    timestamp: chrono::Local::now(),
-                                    direction: LogDirection::SystemInfo,
-                                    address: std::net::SocketAddr::from(([0, 0, 0, 0], 0)),
-                                    data: format!("Logs saved successfully to {}", path.display()).into_bytes(),
-                                });
+                                self.add_system_info(format!("Logs saved successfully to {}", path.display()));
                             }
                             Err(e) => {
-                                self.logs.push(crate::types::LogEntry {
-                                    timestamp: chrono::Local::now(),
-                                    direction: LogDirection::SystemError,
-                                    address: std::net::SocketAddr::from(([0, 0, 0, 0], 0)),
-                                    data: format!("Failed to save logs: {}", e).into_bytes(),
-                                });
+                                self.add_system_error(format!("Failed to save logs: {}", e));
                             }
                         }
                     }
@@ -114,22 +105,14 @@ impl UdpStudioState {
                 
                 ui.add_space(15.0);
                 ui.label("IP Filter:");
-                ui.text_edit_singleline(&mut self.filter_text);
+                if ui.text_edit_singleline(&mut self.filter_text).changed() {
+                    self.update_filtered_indices();
+                }
             });
             
             ui.separator();
 
-            // Table View (automatically fills all available space)
-            let filtered_logs: Vec<(usize, &LogEntry)> = self.logs
-                .iter()
-                .enumerate()
-                .filter(|(_, entry)| {
-                    if self.filter_text.is_empty() {
-                        return true;
-                    }
-                    entry.address.ip().to_string().contains(&self.filter_text)
-                })
-                .collect();
+            let filtered_indices = &self.filtered_indices;
 
             let mut table = TableBuilder::new(ui)
                 .striped(true)
@@ -143,8 +126,8 @@ impl UdpStudioState {
                 .column(Column::exact(60.0))  // Length
                 .column(Column::remainder());  // Info/Payload
 
-            if self.auto_scroll && !filtered_logs.is_empty() {
-                table = table.scroll_to_row(filtered_logs.len() - 1, Some(egui::Align::Max));
+            if self.auto_scroll && !filtered_indices.is_empty() {
+                table = table.scroll_to_row(filtered_indices.len() - 1, Some(egui::Align::Max));
             }
 
             table
@@ -157,9 +140,10 @@ impl UdpStudioState {
                     header.col(|ui| { ui.strong("Info (Preview)"); });
                 })
                 .body(|body| {
-                    body.rows(20.0, filtered_logs.len(), |mut row| {
+                    body.rows(20.0, filtered_indices.len(), |mut row| {
                         let row_index = row.index();
-                        let (orig_idx, entry) = filtered_logs[row_index];
+                        let orig_idx = filtered_indices[row_index];
+                        let entry = &self.logs[orig_idx];
                         let is_selected = Some(orig_idx) == self.selected_log_idx;
 
                         let (direction_text, color) = match entry.direction {
@@ -170,28 +154,7 @@ impl UdpStudioState {
                         };
 
                         let time_str = entry.timestamp.format("%H:%M:%S.%3f").to_string();
-                        let preview_truncated = match entry.direction {
-                            LogDirection::Sent | LogDirection::Received => {
-                                let hex_str = entry.data.iter()
-                                    .map(|b| format!("{:02X}", b))
-                                    .collect::<Vec<String>>()
-                                    .join(" ");
-                                if hex_str.len() > 80 {
-                                    format!("{}...", &hex_str[..77])
-                                } else {
-                                    hex_str
-                                }
-                            }
-                            LogDirection::SystemInfo | LogDirection::SystemError => {
-                                let payload_preview = String::from_utf8_lossy(&entry.data);
-                                let preview = payload_preview.replace('\n', " ");
-                                if preview.len() > 80 {
-                                    format!("{}...", &preview[..77])
-                                } else {
-                                    preview
-                                }
-                            }
-                        };
+                        let preview_truncated = &entry.preview_str;
 
                         row.set_selected(is_selected);
                         
@@ -220,7 +183,7 @@ impl UdpStudioState {
                             }
                         });
                         row.col(|ui| {
-                            let text = egui::RichText::new(entry.address.to_string()).monospace();
+                            let text = egui::RichText::new(&entry.address_str).monospace();
                             let res = ui.add(egui::Button::selectable(is_selected, text).frame(false));
                             if res.clicked() {
                                 clicked = true;
@@ -375,18 +338,18 @@ mod tests {
     fn test_csv_formatting() {
         let timestamp = chrono::Local.with_ymd_and_hms(2026, 6, 13, 12, 0, 0).unwrap();
         let logs = vec![
-            LogEntry {
+            LogEntry::new(
                 timestamp,
-                direction: LogDirection::Sent,
-                address: "127.0.0.1:9000".parse().unwrap(),
-                data: b"Hello".to_vec(),
-            },
-            LogEntry {
+                LogDirection::Sent,
+                "127.0.0.1:9000".parse().unwrap(),
+                b"Hello".to_vec(),
+            ),
+            LogEntry::new(
                 timestamp,
-                direction: LogDirection::Received,
-                address: "192.168.1.50:5000".parse().unwrap(),
-                data: vec![0x10, 0x81, 0x00, 0x01],
-            },
+                LogDirection::Received,
+                "192.168.1.50:5000".parse().unwrap(),
+                vec![0x10, 0x81, 0x00, 0x01],
+            ),
         ];
 
         let mut csv_content = String::new();
@@ -399,7 +362,7 @@ mod tests {
                 LogDirection::SystemInfo => "INFO",
                 LogDirection::SystemError => "ERROR",
             };
-            let addr_str = entry.address.to_string();
+            let addr_str = &entry.address_str;
             let len_str = entry.data.len().to_string();
             let hex_str = entry.data.iter().map(|b| format!("{:02X}", b)).collect::<Vec<String>>().join(" ");
             let plain_str = String::from_utf8_lossy(&entry.data).replace('\n', " ").replace('"', "\"\"");
@@ -418,24 +381,24 @@ mod tests {
 
         let timestamp = chrono::Local::now();
         let logs = vec![
-            LogEntry {
+            LogEntry::new(
                 timestamp,
-                direction: LogDirection::Sent,
-                address: "127.0.0.1:9000".parse().unwrap(),
-                data: b"Hello".to_vec(),
-            },
-            LogEntry {
+                LogDirection::Sent,
+                "127.0.0.1:9000".parse().unwrap(),
+                b"Hello".to_vec(),
+            ),
+            LogEntry::new(
                 timestamp,
-                direction: LogDirection::Received,
-                address: "192.168.1.50:5000".parse().unwrap(),
-                data: vec![0x10, 0x81, 0x00, 0x01],
-            },
-            LogEntry {
+                LogDirection::Received,
+                "192.168.1.50:5000".parse().unwrap(),
+                vec![0x10, 0x81, 0x00, 0x01],
+            ),
+            LogEntry::new(
                 timestamp,
-                direction: LogDirection::SystemInfo,
-                address: "0.0.0.0:0".parse().unwrap(),
-                data: b"System started".to_vec(),
-            },
+                LogDirection::SystemInfo,
+                "0.0.0.0:0".parse().unwrap(),
+                b"System started".to_vec(),
+            ),
         ];
 
         let result = write_pcap_helper(&path, &logs, "127.0.0.1:9000");

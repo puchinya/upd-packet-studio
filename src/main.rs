@@ -32,6 +32,7 @@ pub struct UdpStudioState {
     pub(crate) filter_text: String,
     pub(crate) auto_scroll: bool,
     pub(crate) log_export_format: LogExportFormat,
+    pub(crate) filtered_indices: Vec<usize>,
     
     // Listener settings
     pub(crate) listener_addr: String,
@@ -75,6 +76,45 @@ impl UdpStudioState {
         config.save();
     }
 
+    pub(crate) fn push_log(&mut self, entry: LogEntry) {
+        self.logs.push(entry);
+        self.update_filtered_indices();
+    }
+
+    pub(crate) fn add_system_info(&mut self, msg: String) {
+        let entry = LogEntry::new(
+            Local::now(),
+            LogDirection::SystemInfo,
+            SocketAddr::from(([0, 0, 0, 0], 0)),
+            msg.into_bytes(),
+        );
+        self.push_log(entry);
+    }
+
+    pub(crate) fn add_system_error(&mut self, msg: String) {
+        let entry = LogEntry::new(
+            Local::now(),
+            LogDirection::SystemError,
+            SocketAddr::from(([0, 0, 0, 0], 0)),
+            msg.into_bytes(),
+        );
+        self.push_log(entry);
+    }
+
+    pub(crate) fn update_filtered_indices(&mut self) {
+        self.filtered_indices = self.logs
+            .iter()
+            .enumerate()
+            .filter(|(_, entry)| {
+                if self.filter_text.is_empty() {
+                    return true;
+                }
+                entry.address_str.contains(&self.filter_text)
+            })
+            .map(|(idx, _)| idx)
+            .collect();
+    }
+
     pub(crate) fn send_packet(&mut self, target: &str, payload_type: PayloadType, payload: &str) {
         let data_res = match payload_type {
             PayloadType::Text => Ok(payload.as_bytes().to_vec()),
@@ -84,12 +124,7 @@ impl UdpStudioState {
         match data_res {
             Ok(data) => {
                 if data.is_empty() {
-                    self.logs.push(LogEntry {
-                        timestamp: Local::now(),
-                        direction: LogDirection::SystemError,
-                        address: SocketAddr::from(([0, 0, 0, 0], 0)),
-                        data: "Cannot send empty packet.".to_string().into_bytes(),
-                    });
+                    self.add_system_error("Cannot send empty packet.".to_string());
                     return;
                 }
                 self.udp_worker.send(UdpCommand::Send {
@@ -98,12 +133,7 @@ impl UdpStudioState {
                 });
             }
             Err(e) => {
-                self.logs.push(LogEntry {
-                    timestamp: Local::now(),
-                    direction: LogDirection::SystemError,
-                    address: SocketAddr::from(([0, 0, 0, 0], 0)),
-                    data: format!("Hex parsing error: {}", e).into_bytes(),
-                });
+                self.add_system_error(format!("Hex parsing error: {}", e));
             }
         }
     }
@@ -177,6 +207,7 @@ impl MainApp {
             filter_text: String::new(),
             auto_scroll: true,
             log_export_format: LogExportFormat::Csv,
+            filtered_indices: Vec::new(),
             listener_addr: config.listener_addr,
             is_listening: false,
             bound_addr: None,
@@ -239,40 +270,22 @@ impl eframe::App for MainApp {
                     self.state.bound_addr = Some(addr.to_string());
                     self.state.listener_addr = addr.to_string();
                     self.state.listener_error = None;
-                    self.state.logs.push(LogEntry {
-                        timestamp: Local::now(),
-                        direction: LogDirection::SystemInfo,
-                        address: addr,
-                        data: format!("Listening socket bound to {}", addr).into_bytes(),
-                    });
+                    self.state.add_system_info(format!("Listening socket bound to {}", addr));
                     self.state.save_config();
                 }
                 UdpEvent::Unbound => {
                     self.state.is_listening = false;
                     self.state.bound_addr = None;
                     self.state.multicast_groups.clear();
-                    self.state.logs.push(LogEntry {
-                        timestamp: Local::now(),
-                        direction: LogDirection::SystemInfo,
-                        address: SocketAddr::from(([0, 0, 0, 0], 0)),
-                        data: "Listening socket unbound".to_string().into_bytes(),
-                    });
+                    self.state.add_system_info("Listening socket unbound".to_string());
                 }
                 UdpEvent::Sent { to, data, timestamp } => {
-                    self.state.logs.push(LogEntry {
-                        timestamp,
-                        direction: LogDirection::Sent,
-                        address: to,
-                        data,
-                    });
+                    let entry = LogEntry::new(timestamp, LogDirection::Sent, to, data);
+                    self.state.push_log(entry);
                 }
                 UdpEvent::Received { from, data, timestamp } => {
-                    self.state.logs.push(LogEntry {
-                        timestamp,
-                        direction: LogDirection::Received,
-                        address: from,
-                        data,
-                    });
+                    let entry = LogEntry::new(timestamp, LogDirection::Received, from, data);
+                    self.state.push_log(entry);
                     ctx.request_repaint();
                 }
                 UdpEvent::Error(err_msg) => {
@@ -280,33 +293,18 @@ impl eframe::App for MainApp {
                         self.state.listener_error = Some(err_msg.clone());
                         self.state.multicast_groups.clear();
                     }
-                    self.state.logs.push(LogEntry {
-                        timestamp: Local::now(),
-                        direction: LogDirection::SystemError,
-                        address: SocketAddr::from(([0, 0, 0, 0], 0)),
-                        data: err_msg.into_bytes(),
-                    });
+                    self.state.add_system_error(err_msg);
                 }
                 UdpEvent::MulticastJoined { multi_addr, interface_addr } => {
                     self.state.multicast_groups.push(MulticastGroup {
                         multi_addr: multi_addr.clone(),
                         interface_addr: interface_addr.clone(),
                     });
-                    self.state.logs.push(LogEntry {
-                        timestamp: Local::now(),
-                        direction: LogDirection::SystemInfo,
-                        address: SocketAddr::from(([0, 0, 0, 0], 0)),
-                        data: format!("Joined multicast group {} on interface {}", multi_addr, interface_addr).into_bytes(),
-                    });
+                    self.state.add_system_info(format!("Joined multicast group {} on interface {}", multi_addr, interface_addr));
                 }
                 UdpEvent::MulticastLeft { multi_addr, interface_addr } => {
                     self.state.multicast_groups.retain(|g| !(g.multi_addr == *multi_addr && g.interface_addr == *interface_addr));
-                    self.state.logs.push(LogEntry {
-                        timestamp: Local::now(),
-                        direction: LogDirection::SystemInfo,
-                        address: SocketAddr::from(([0, 0, 0, 0], 0)),
-                        data: format!("Left multicast group {} on interface {}", multi_addr, interface_addr).into_bytes(),
-                    });
+                    self.state.add_system_info(format!("Left multicast group {} on interface {}", multi_addr, interface_addr));
                 }
             }
         }
@@ -445,6 +443,7 @@ impl eframe::App for MainApp {
 
 fn main() -> eframe::Result<()> {
     let options = eframe::NativeOptions {
+        renderer: eframe::Renderer::Wgpu,
         viewport: egui::ViewportBuilder::default()
             .with_title("UDP Packet Studio")
             .with_inner_size([1100.0, 700.0])

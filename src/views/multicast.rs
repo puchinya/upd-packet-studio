@@ -134,12 +134,7 @@ impl UdpStudioState {
         // Apply mutations outside borrow scopes
         if let Some((m_addr, i_addr)) = join_trigger {
             if m_addr.is_empty() || i_addr.is_empty() {
-                self.logs.push(crate::types::LogEntry {
-                    timestamp: chrono::Local::now(),
-                    direction: crate::types::LogDirection::SystemError,
-                    address: std::net::SocketAddr::from(([0, 0, 0, 0], 0)),
-                    data: "Multicast address and Interface address cannot be empty.".to_string().into_bytes(),
-                });
+                self.add_system_error("Multicast address and Interface address cannot be empty.".to_string());
             } else {
                 self.udp_worker.send(crate::udp_worker::UdpCommand::JoinMulticast {
                     multi_addr: m_addr,

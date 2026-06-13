@@ -194,12 +194,7 @@ impl UdpStudioState {
                             result = Some((hex_str, PayloadType::Hex, target));
                         }
                         Err(e) => {
-                            self.logs.push(crate::types::LogEntry {
-                                timestamp: chrono::Local::now(),
-                                direction: crate::types::LogDirection::SystemError,
-                                address: std::net::SocketAddr::from(([0, 0, 0, 0], 0)),
-                                data: format!("ECHONET Lite builder error: {}", e).into_bytes(),
-                            });
+                            self.add_system_error(format!("ECHONET Lite builder error: {}", e));
                         }
                     }
                 }
@@ -382,6 +377,7 @@ mod tests {
             filter_text: String::new(),
             auto_scroll: true,
             log_export_format: crate::types::LogExportFormat::Csv,
+            filtered_indices: Vec::new(),
             listener_addr: String::new(),
             is_listening: false,
             bound_addr: None,

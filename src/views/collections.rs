@@ -300,29 +300,14 @@ impl UdpStudioState {
                             .save_file()
                         {
                             if let Err(e) = std::fs::write(&path, yaml_str) {
-                                self.logs.push(crate::types::LogEntry {
-                                    timestamp: chrono::Local::now(),
-                                    direction: crate::types::LogDirection::SystemError,
-                                    address: std::net::SocketAddr::from(([0, 0, 0, 0], 0)),
-                                    data: format!("Failed to export collection: {}", e).into_bytes(),
-                                });
+                                self.add_system_error(format!("Failed to export collection: {}", e));
                             } else {
-                                self.logs.push(crate::types::LogEntry {
-                                    timestamp: chrono::Local::now(),
-                                    direction: crate::types::LogDirection::SystemInfo,
-                                    address: std::net::SocketAddr::from(([0, 0, 0, 0], 0)),
-                                    data: format!("Collection exported to {}", path.display()).into_bytes(),
-                                });
+                                self.add_system_info(format!("Collection exported to {}", path.display()));
                             }
                         }
                     }
                     Err(e) => {
-                        self.logs.push(crate::types::LogEntry {
-                            timestamp: chrono::Local::now(),
-                            direction: crate::types::LogDirection::SystemError,
-                            address: std::net::SocketAddr::from(([0, 0, 0, 0], 0)),
-                            data: format!("YAML Serialization Error: {}", e).into_bytes(),
-                        });
+                        self.add_system_error(format!("YAML Serialization Error: {}", e));
                     }
                 }
             }
@@ -398,30 +383,15 @@ impl UdpStudioState {
                                 };
                                 self.collections.push(new_col);
                                 self.save_config(); // Save config with new collection
-                                self.logs.push(crate::types::LogEntry {
-                                    timestamp: chrono::Local::now(),
-                                    direction: crate::types::LogDirection::SystemInfo,
-                                    address: std::net::SocketAddr::from(([0, 0, 0, 0], 0)),
-                                    data: format!("Collection imported successfully from {}", path.display()).into_bytes(),
-                                });
+                                self.add_system_info(format!("Collection imported successfully from {}", path.display()));
                             }
                             Err(e) => {
-                                self.logs.push(crate::types::LogEntry {
-                                    timestamp: chrono::Local::now(),
-                                    direction: crate::types::LogDirection::SystemError,
-                                    address: std::net::SocketAddr::from(([0, 0, 0, 0], 0)),
-                                    data: format!("Failed to parse YAML collection: {}", e).into_bytes(),
-                                });
+                                self.add_system_error(format!("Failed to parse YAML collection: {}", e));
                             }
                         }
                     }
                     Err(e) => {
-                        self.logs.push(crate::types::LogEntry {
-                            timestamp: chrono::Local::now(),
-                            direction: crate::types::LogDirection::SystemError,
-                            address: std::net::SocketAddr::from(([0, 0, 0, 0], 0)),
-                            data: format!("Failed to read file: {}", e).into_bytes(),
-                        });
+                        self.add_system_error(format!("Failed to read file: {}", e));
                     }
                 }
             }
