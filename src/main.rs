@@ -360,7 +360,7 @@ impl eframe::App for MainApp {
                             ui.add_space(15.0);
                             
                             // Application title
-                            ui.strong("UDP Packet Studio");
+                            ui.strong(concat!("UDP Packet Studio v", env!("CARGO_PKG_VERSION")));
                             
                             ui.add_space(20.0);
                             ui.separator();
@@ -445,7 +445,7 @@ fn main() -> eframe::Result<()> {
     let options = eframe::NativeOptions {
         renderer: eframe::Renderer::Wgpu,
         viewport: egui::ViewportBuilder::default()
-            .with_title("UDP Packet Studio")
+            .with_title(concat!("UDP Packet Studio v", env!("CARGO_PKG_VERSION")))
             .with_inner_size([1100.0, 700.0])
             .with_decorations(false) // borderless window
             .with_transparent(true),
@@ -453,7 +453,7 @@ fn main() -> eframe::Result<()> {
     };
     
     eframe::run_native(
-        "UDP Packet Studio",
+        concat!("UDP Packet Studio v", env!("CARGO_PKG_VERSION")),
         options,
         Box::new(|cc| Ok(Box::new(MainApp::new(cc)))),
     )
