@@ -126,9 +126,7 @@ impl UdpStudioState {
                 .column(Column::exact(60.0))  // Length
                 .column(Column::remainder());  // Info/Payload
 
-            if self.auto_scroll && !filtered_indices.is_empty() {
-                table = table.scroll_to_row(filtered_indices.len() - 1, Some(egui::Align::Max));
-            }
+            table = table.stick_to_bottom(self.auto_scroll);
 
             table
                 .header(24.0, |mut header| {

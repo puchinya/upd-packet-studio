@@ -10,12 +10,34 @@ pub struct SavedConfig {
     pub composer_payload: String,
 }
 
+fn config_path() -> Option<std::path::PathBuf> {
+    dirs::config_dir().map(|p| p.join("udp-packet-studio").join("updexp_config.json"))
+}
+
 impl SavedConfig {
     pub fn load() -> Self {
-        if let Ok(content) = std::fs::read_to_string("updexp_config.json") {
-            if let Ok(config) = serde_json::from_str::<Self>(&content) {
-                return config;
+        let mut loaded_config = None;
+
+        // Try reading from app-specific config directory first
+        if let Some(path) = config_path() {
+            if let Ok(content) = std::fs::read_to_string(&path) {
+                if let Ok(config) = serde_json::from_str::<Self>(&content) {
+                    loaded_config = Some(config);
+                }
             }
+        }
+
+        // Fallback to local file in current directory if not found in config directory
+        if loaded_config.is_none() {
+            if let Ok(content) = std::fs::read_to_string("updexp_config.json") {
+                if let Ok(config) = serde_json::from_str::<Self>(&content) {
+                    loaded_config = Some(config);
+                }
+            }
+        }
+
+        if let Some(config) = loaded_config {
+            return config;
         }
         
         Self {
@@ -65,7 +87,18 @@ impl SavedConfig {
 
     pub fn save(&self) {
         if let Ok(content) = serde_json::to_string_pretty(self) {
-            let _ = std::fs::write("updexp_config.json", content);
+            let mut saved = false;
+            if let Some(path) = config_path() {
+                if let Some(parent) = path.parent() {
+                    let _ = std::fs::create_dir_all(parent);
+                }
+                if std::fs::write(&path, &content).is_ok() {
+                    saved = true;
+                }
+            }
+            if !saved {
+                let _ = std::fs::write("updexp_config.json", content);
+            }
         }
     }
 }
