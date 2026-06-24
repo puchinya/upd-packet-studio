@@ -85,9 +85,8 @@ impl LogEntry {
             }
             LogDirection::SystemInfo | LogDirection::SystemError => {
                 let payload_preview = String::from_utf8_lossy(&data);
-                let preview = payload_preview.replace('\n', " ");
-                if preview.len() > 80 {
-                    format!("{}...", &preview[..77])
+                let preview = payload_preview.replace('\n', " ");if preview.chars().count() > 80 {
+                    format!("{}...", preview.chars().take(77).collect::<String>())
                 } else {
                     preview
                 }
@@ -211,4 +210,42 @@ pub enum LoggerCommand {
         format: LogExportFormat,
         listener_addr: String,
     },
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_long_multibyte_system_error_preview() {
+        let msg = "送信エラーが発生しました。アドレスの解決に失敗したか、指定されたホスト名またはIPアドレスが正しくありません。再度設定を確認してください。";
+        // Ensure the byte length is > 80, but character count is < 80.
+        assert!(msg.len() > 80);
+        assert!(msg.chars().count() < 80);
+        
+        let entry = LogEntry::new(
+            Local::now(),
+            LogDirection::SystemError,
+            SocketAddr::from(([0, 0, 0, 0], 0)),
+            msg.as_bytes().to_vec(),
+        );
+        
+        // Should not be truncated
+        assert!(!entry.preview_str.ends_with("..."));
+        assert_eq!(entry.preview_str, msg);
+
+        // Now test one that is longer than 80 characters
+        let long_msg = "送信エラーが発生しました。アドレスの解決に失敗したか、指定されたホスト名またはIPアドレスが正しくありません。再度設定を確認してください。再度設定を確認してください。";
+        assert!(long_msg.chars().count() > 80);
+
+        let entry_long = LogEntry::new(
+            Local::now(),
+            LogDirection::SystemError,
+            SocketAddr::from(([0, 0, 0, 0], 0)),
+            long_msg.as_bytes().to_vec(),
+        );
+
+        assert!(entry_long.preview_str.ends_with("..."));
+        assert_eq!(entry_long.preview_str.chars().count(), 80); // 77 chars from msg + "..." (3 chars)
+    }
 }
