@@ -740,6 +740,87 @@ impl eframe::App for MainApp {
                 });
             self.state.settings_open = open && !close_clicked;
         }
+
+        show_resize_handles(&ctx);
+    }
+}
+
+fn show_resize_handles(ctx: &egui::Context) {
+    use egui::viewport::ResizeDirection;
+    use egui::{Area, Id, Sense, Rect, pos2, CursorIcon, ViewportCommand};
+
+    let rect = ctx.viewport_rect();
+    let border = 6.0;
+    let corner = 12.0;
+
+    struct ResizeZone {
+        rect: Rect,
+        direction: ResizeDirection,
+        cursor: CursorIcon,
+    }
+
+    let zones = [
+        // Corners
+        ResizeZone {
+            rect: Rect::from_min_max(rect.left_top(), pos2(rect.left() + corner, rect.top() + corner)),
+            direction: ResizeDirection::NorthWest,
+            cursor: CursorIcon::ResizeNwSe,
+        },
+        ResizeZone {
+            rect: Rect::from_min_max(pos2(rect.right() - corner, rect.top()), pos2(rect.right(), rect.top() + corner)),
+            direction: ResizeDirection::NorthEast,
+            cursor: CursorIcon::ResizeNeSw,
+        },
+        ResizeZone {
+            rect: Rect::from_min_max(pos2(rect.left(), rect.bottom() - corner), pos2(rect.left() + corner, rect.bottom())),
+            direction: ResizeDirection::SouthWest,
+            cursor: CursorIcon::ResizeNeSw,
+        },
+        ResizeZone {
+            rect: Rect::from_min_max(pos2(rect.right() - corner, rect.bottom() - corner), rect.right_bottom()),
+            direction: ResizeDirection::SouthEast,
+            cursor: CursorIcon::ResizeNwSe,
+        },
+        // Edges
+        ResizeZone {
+            rect: Rect::from_min_max(pos2(rect.left() + corner, rect.top()), pos2(rect.right() - corner, rect.top() + border)),
+            direction: ResizeDirection::North,
+            cursor: CursorIcon::ResizeVertical,
+        },
+        ResizeZone {
+            rect: Rect::from_min_max(pos2(rect.left() + corner, rect.bottom() - border), pos2(rect.right() - corner, rect.bottom())),
+            direction: ResizeDirection::South,
+            cursor: CursorIcon::ResizeVertical,
+        },
+        ResizeZone {
+            rect: Rect::from_min_max(pos2(rect.left(), rect.top() + corner), pos2(rect.left() + border, rect.bottom() - corner)),
+            direction: ResizeDirection::West,
+            cursor: CursorIcon::ResizeHorizontal,
+        },
+        ResizeZone {
+            rect: Rect::from_min_max(pos2(rect.right() - border, rect.top() + corner), pos2(rect.right(), rect.bottom() - corner)),
+            direction: ResizeDirection::East,
+            cursor: CursorIcon::ResizeHorizontal,
+        },
+    ];
+
+    for (i, zone) in zones.iter().enumerate() {
+        let id = Id::new("resize_handle").with(i);
+        let response = Area::new(id)
+            .fixed_pos(zone.rect.min)
+            .interactable(true)
+            .movable(false)
+            .show(ctx, |ui| {
+                ui.allocate_rect(zone.rect, Sense::drag())
+            });
+        
+        let response = response.inner;
+        if response.hovered() {
+            ctx.set_cursor_icon(zone.cursor);
+        }
+        if response.dragged() {
+            ctx.send_viewport_cmd(ViewportCommand::BeginResize(zone.direction));
+        }
     }
 }
 
@@ -749,6 +830,7 @@ fn main() -> eframe::Result<()> {
         viewport: egui::ViewportBuilder::default()
             .with_title(concat!("UDP Packet Studio v", env!("CARGO_PKG_VERSION")))
             .with_inner_size([1100.0, 700.0])
+            .with_resizable(true)
             .with_decorations(false) // borderless window
             .with_transparent(true),
         ..Default::default()
@@ -760,3 +842,4 @@ fn main() -> eframe::Result<()> {
         Box::new(|cc| Ok(Box::new(MainApp::new(cc)))),
     )
 }
+
