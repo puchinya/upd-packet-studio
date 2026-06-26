@@ -2,6 +2,41 @@ use eframe::egui;
 
 // Styling system
 pub fn setup_custom_styles(ctx: &egui::Context) {
+    // Set up custom fonts for Japanese support
+    let mut fonts = egui::FontDefinitions::default();
+    let font_paths = [
+        "/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc",
+        "/System/Library/Fonts/PingFang.ttc",
+        "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
+        "/Library/Fonts/Arial Unicode.ttf",
+        "C:\\Windows\\Fonts\\msyh.ttc",
+        "C:\\Windows\\Fonts\\msjh.ttc",
+        "C:\\Windows\\Fonts\\msgothic.ttc",
+    ];
+
+    let mut font_data = None;
+    for path in &font_paths {
+        if let Ok(data) = std::fs::read(path) {
+            font_data = Some(data);
+            break;
+        }
+    }
+
+    if let Some(data) = font_data {
+        fonts.font_data.insert(
+            "japanese".to_owned(),
+            egui::FontData::from_owned(data).into(),
+        );
+
+        if let Some(family) = fonts.families.get_mut(&egui::FontFamily::Proportional) {
+            family.push("japanese".to_owned());
+        }
+        if let Some(family) = fonts.families.get_mut(&egui::FontFamily::Monospace) {
+            family.push("japanese".to_owned());
+        }
+    }
+    ctx.set_fonts(fonts);
+
     let mut visuals = egui::Visuals::dark();
     
     // Custom flat dark-theme color tokens
