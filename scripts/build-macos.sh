@@ -25,6 +25,21 @@ echo "Copying binary..."
 cp "${BINARY_PATH}" "${MACOS_DIR}/${APP_NAME}"
 chmod +x "${MACOS_DIR}/${APP_NAME}"
 
+# Handle Icon file if it exists
+HAS_ICON=false
+# Search for icon.icns in project root or scripts directory
+if [ -f "icon.icns" ]; then
+  echo "Found icon.icns in project root. Copying to Resources..."
+  cp "icon.icns" "${RESOURCES_DIR}/"
+  HAS_ICON=true
+elif [ -f "scripts/icon.icns" ]; then
+  echo "Found icon.icns in scripts directory. Copying to Resources..."
+  cp "scripts/icon.icns" "${RESOURCES_DIR}/"
+  HAS_ICON=true
+else
+  echo "Warning: icon.icns not found. Proceeding without App Icon."
+fi
+
 # Extract version from Cargo.toml
 VERSION=$(grep -m 1 '^version =' Cargo.toml | cut -d '"' -f 2)
 if [ -z "$VERSION" ]; then
@@ -57,6 +72,10 @@ cat <<EOF > "${CONTENTS_DIR}/Info.plist"
     <string>10.12</string>
     <key>NSHighResolutionCapable</key>
     <true/>
+$(if [ "$HAS_ICON" = true ]; then
+  echo "    <key>CFBundleIconFile</key>"
+  echo "    <string>icon.icns</string>"
+fi)
 </dict>
 </plist>
 EOF

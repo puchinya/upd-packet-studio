@@ -541,7 +541,7 @@ impl eframe::App for MainApp {
 
         // Outer window container with rounded corners (enabled by transparent viewport option)
         egui::Frame::NONE
-            .fill(egui::Color32::from_rgb(20, 24, 30))
+            .fill(egui::Color32::from_rgb(13, 16, 21))
             .corner_radius(egui::CornerRadius::same(12))
             .show(ui, |ui| {
                 // Force the frame to expand to fill the entire window area
@@ -553,7 +553,7 @@ impl eframe::App for MainApp {
                 // Custom Title Bar Panel (Mac Style header with integrated socket listener setup)
                 egui::Panel::top("custom_title_bar")
                     .frame(egui::Frame::default()
-                        .fill(egui::Color32::from_rgb(15, 18, 22))
+                        .fill(egui::Color32::from_rgb(9, 11, 14))
                         .corner_radius(egui::CornerRadius {
                             nw: 12,
                             ne: 12,
@@ -651,7 +651,7 @@ impl eframe::App for MainApp {
                 // Bottom status bar panel
                 egui::Panel::bottom("bottom_status_bar")
                     .frame(egui::Frame::default()
-                        .fill(egui::Color32::from_rgb(15, 18, 22))
+                        .fill(egui::Color32::from_rgb(9, 11, 14))
                         .corner_radius(egui::CornerRadius {
                             nw: 0,
                             ne: 0,
@@ -756,7 +756,44 @@ impl eframe::App for MainApp {
 
                 // Main docking control area inside central panel
                 let mut viewer = MyTabViewer { state: &mut self.state };
+                
+                let mut dock_style = egui_dock::Style::from_egui(ui.style());
+                
+                // Customize tab bar background and padding to fit title bar style
+                dock_style.tab_bar.bg_fill = egui::Color32::from_rgb(9, 11, 14);
+                dock_style.tab_bar.height = 30.0;
+                
+                // Customize active tab style (matches panel background)
+                dock_style.tab.active.bg_fill = egui::Color32::from_rgb(13, 16, 21);
+                dock_style.tab.active.text_color = egui::Color32::from_rgb(255, 255, 255);
+                dock_style.tab.active.outline_color = egui::Color32::from_rgb(33, 41, 54);
+                
+                // Customize inactive tab style
+                dock_style.tab.inactive.bg_fill = egui::Color32::from_rgb(9, 11, 14);
+                dock_style.tab.inactive.text_color = egui::Color32::from_rgb(130, 140, 155);
+                dock_style.tab.inactive.outline_color = egui::Color32::from_rgb(9, 11, 14);
+                
+                // Customize hovered tab style
+                dock_style.tab.hovered.bg_fill = egui::Color32::from_rgb(26, 33, 45);
+                dock_style.tab.hovered.text_color = egui::Color32::from_rgb(255, 255, 255);
+                dock_style.tab.hovered.outline_color = egui::Color32::from_rgb(33, 41, 54);
+                
+                // Customize focused tab style
+                dock_style.tab.focused.bg_fill = egui::Color32::from_rgb(13, 16, 21);
+                dock_style.tab.focused.text_color = egui::Color32::from_rgb(255, 255, 255);
+                dock_style.tab.focused.outline_color = egui::Color32::from_rgb(79, 110, 242);
+                
+                dock_style.tab.active.corner_radius = egui::CornerRadius { nw: 6, ne: 6, sw: 0, se: 0 };
+                dock_style.tab.inactive.corner_radius = egui::CornerRadius { nw: 6, ne: 6, sw: 0, se: 0 };
+                dock_style.tab.hovered.corner_radius = egui::CornerRadius { nw: 6, ne: 6, sw: 0, se: 0 };
+                dock_style.tab.focused.corner_radius = egui::CornerRadius { nw: 6, ne: 6, sw: 0, se: 0 };
+
+                // Resizing separator styling
+                dock_style.separator.width = 1.0;
+                dock_style.separator.extra_interact_width = 4.0;
+                
                 DockArea::new(&mut self.dock_state)
+                    .style(dock_style)
                     .show_close_buttons(false)
                     .draggable_tabs(false)
                     .tab_context_menus(false)
@@ -1055,6 +1092,13 @@ pub fn show_resize_handles(ui: &mut egui::Ui) {
 }
 
 pub fn run() -> eframe::Result<()> {
+    let icon_bytes = include_bytes!("icon.rgba");
+    let icon = egui::IconData {
+        rgba: icon_bytes.to_vec(),
+        width: 64,
+        height: 64,
+    };
+
     let options = eframe::NativeOptions {
         renderer: eframe::Renderer::Wgpu,
         viewport: egui::ViewportBuilder::default()
@@ -1062,7 +1106,8 @@ pub fn run() -> eframe::Result<()> {
             .with_inner_size([1100.0, 700.0])
             .with_resizable(true)
             .with_decorations(false) // borderless window
-            .with_transparent(true),
+            .with_transparent(true)
+            .with_icon(icon),
         ..Default::default()
     };
     

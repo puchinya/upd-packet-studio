@@ -3,4 +3,5 @@
 /updexp_config.json
 *.pkg
 *.app
+*.dmg
 /.idea/
