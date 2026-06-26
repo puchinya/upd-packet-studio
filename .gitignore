@@ -1,3 +1,6 @@
-/target
-/.antigravitycli
+/target/
+/.antigravitycli/
 /updexp_config.json
+*.pkg
+*.app
+/.idea/
