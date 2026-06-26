@@ -523,6 +523,9 @@ impl eframe::App for MainApp {
             .fill(egui::Color32::from_rgb(20, 24, 30))
             .corner_radius(egui::CornerRadius::same(12))
             .show(ui, |ui| {
+                // Force the frame to expand to fill the entire window area
+                ui.expand_to_include_rect(ui.max_rect());
+
                 // Set spacing between panel elements to zero so they align perfectly
                 ui.style_mut().spacing.item_spacing = egui::vec2(0.0, 0.0);
 
@@ -741,15 +744,15 @@ impl eframe::App for MainApp {
             self.state.settings_open = open && !close_clicked;
         }
 
-        show_resize_handles(&ctx);
+        show_resize_handles(ui);
     }
 }
 
-fn show_resize_handles(ctx: &egui::Context) {
+fn show_resize_handles(ui: &mut egui::Ui) {
     use egui::viewport::ResizeDirection;
-    use egui::{Area, Id, Sense, Rect, pos2, CursorIcon, ViewportCommand};
+    use egui::{Sense, Rect, pos2, CursorIcon, ViewportCommand};
 
-    let rect = ctx.viewport_rect();
+    let rect = ui.ctx().viewport_rect();
     let border = 6.0;
     let corner = 12.0;
 
@@ -804,22 +807,13 @@ fn show_resize_handles(ctx: &egui::Context) {
         },
     ];
 
-    for (i, zone) in zones.iter().enumerate() {
-        let id = Id::new("resize_handle").with(i);
-        let response = Area::new(id)
-            .fixed_pos(zone.rect.min)
-            .interactable(true)
-            .movable(false)
-            .show(ctx, |ui| {
-                ui.allocate_rect(zone.rect, Sense::drag())
-            });
-        
-        let response = response.inner;
+    for zone in zones.iter() {
+        let response = ui.allocate_rect(zone.rect, Sense::drag());
         if response.hovered() {
-            ctx.set_cursor_icon(zone.cursor);
+            ui.ctx().set_cursor_icon(zone.cursor);
         }
         if response.dragged() {
-            ctx.send_viewport_cmd(ViewportCommand::BeginResize(zone.direction));
+            ui.ctx().send_viewport_cmd(ViewportCommand::BeginResize(zone.direction));
         }
     }
 }
