@@ -211,6 +211,7 @@ impl<'a> egui_dock::TabViewer for MyTabViewer<'a> {
 struct MainApp {
     dock_state: DockState<Tab>,
     state: UdpStudioState,
+    was_focused: bool,
 }
 
 impl MainApp {
@@ -461,12 +462,41 @@ impl MainApp {
         Self {
             dock_state,
             state,
+            was_focused: true,
         }
     }
 }
 
+fn minimize_window(ctx: &egui::Context) {
+    #[cfg(target_os = "macos")]
+    unsafe {
+        use objc::{msg_send, sel, sel_impl};
+        let ns_app: *mut objc::runtime::Object = msg_send![objc::class!(NSApplication), sharedApplication];
+        if !ns_app.is_null() {
+            let key_window: *mut objc::runtime::Object = msg_send![ns_app, keyWindow];
+            if !key_window.is_null() {
+                let _: () = msg_send![key_window, miniaturize: std::ptr::null_mut::<objc::runtime::Object>()];
+                return;
+            }
+        }
+    }
+    ctx.send_viewport_cmd(egui::ViewportCommand::Minimized(true));
+}
+
 // macOS style window control circles
-fn circle_button(ui: &mut egui::Ui, color: egui::Color32) -> egui::Response {
+#[derive(Debug, Clone, Copy)]
+enum TrafficLightType {
+    Close,
+    Minimize,
+    Maximize,
+}
+
+fn circle_button(
+    ui: &mut egui::Ui,
+    light_type: TrafficLightType,
+    is_any_hovered: bool,
+    is_focused: bool,
+) -> egui::Response {
     let size = egui::vec2(12.0, 12.0);
     let (rect, response) = ui.allocate_exact_size(size, egui::Sense::click());
     if ui.is_rect_visible(rect) {
@@ -474,21 +504,82 @@ fn circle_button(ui: &mut egui::Ui, color: egui::Color32) -> egui::Response {
         let is_hovered = response.hovered();
         let is_pressed = is_hovered && ui.input(|i| i.pointer.primary_down());
         
-        let fill_color = if is_pressed {
-            color.linear_multiply(0.7)
-        } else if is_hovered {
-            color.linear_multiply(0.9)
+        let base_color = if !is_focused && !is_any_hovered {
+            egui::Color32::from_rgb(60, 60, 60)
         } else {
-            color
+            match light_type {
+                TrafficLightType::Close => egui::Color32::from_rgb(255, 95, 86),
+                TrafficLightType::Minimize => egui::Color32::from_rgb(255, 189, 46),
+                TrafficLightType::Maximize => egui::Color32::from_rgb(39, 201, 63),
+            }
         };
         
-        painter.circle_filled(rect.center(), 6.0, fill_color);
+        let fill_color = if is_pressed {
+            base_color.linear_multiply(0.7)
+        } else if is_hovered {
+            base_color.linear_multiply(0.85)
+        } else {
+            base_color
+        };
+        
+        let border_color = if !is_focused && !is_any_hovered {
+            egui::Color32::from_rgb(45, 45, 45)
+        } else {
+            match light_type {
+                TrafficLightType::Close => egui::Color32::from_rgb(224, 76, 68),
+                TrafficLightType::Minimize => egui::Color32::from_rgb(223, 159, 36),
+                TrafficLightType::Maximize => egui::Color32::from_rgb(30, 163, 50),
+            }
+        };
+        
+        painter.circle_filled(rect.center(), 6.0, border_color);
+        painter.circle_filled(rect.center(), 5.2, fill_color);
+        
+        if is_any_hovered {
+            let glyph_color = egui::Color32::from_rgba_premultiplied(0, 0, 0, 180);
+            let stroke = egui::Stroke::new(1.2, glyph_color);
+            let center = rect.center();
+            
+            match light_type {
+                TrafficLightType::Close => {
+                    let d = 2.2;
+                    painter.line_segment([center + egui::vec2(-d, -d), center + egui::vec2(d, d)], stroke);
+                    painter.line_segment([center + egui::vec2(d, -d), center + egui::vec2(-d, d)], stroke);
+                }
+                TrafficLightType::Minimize => {
+                    let w = 3.0;
+                    painter.line_segment([center + egui::vec2(-w, 0.0), center + egui::vec2(w, 0.0)], stroke);
+                }
+                TrafficLightType::Maximize => {
+                    let d = 2.2;
+                    painter.line_segment([center + egui::vec2(-d, d), center + egui::vec2(d, -d)], stroke);
+                    painter.line_segment([center + egui::vec2(d, -d), center + egui::vec2(d - 1.8, -d)], stroke);
+                    painter.line_segment([center + egui::vec2(d, -d), center + egui::vec2(d, -d + 1.8)], stroke);
+                    painter.line_segment([center + egui::vec2(-d, d), center + egui::vec2(-d + 1.8, d)], stroke);
+                    painter.line_segment([center + egui::vec2(-d, d), center + egui::vec2(-d, d - 1.8)], stroke);
+                }
+            }
+        }
     }
     response
 }
 
 impl eframe::App for MainApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        let is_focused = ui.ctx().input(|i| i.focused);
+        if is_focused && !self.was_focused {
+            ui.ctx().input_mut(|i| {
+                i.events.push(egui::Event::PointerButton {
+                    pos: egui::pos2(-1.0, -1.0),
+                    button: egui::PointerButton::Primary,
+                    pressed: false,
+                    modifiers: egui::Modifiers::default(),
+                });
+            });
+            ui.ctx().request_repaint();
+        }
+        self.was_focused = is_focused;
+        
         let ctx = ui.ctx().clone();
         
         // Handle all incoming events from the background UDP worker thread
@@ -560,7 +651,12 @@ impl eframe::App for MainApp {
                             sw: 0,
                             se: 0,
                         })
-                        .inner_margin(egui::Margin::symmetric(12, 8)))
+                        .inner_margin(egui::Margin {
+                            left: 16,
+                            right: 16,
+                            top: 14,
+                            bottom: 14,
+                        }))
                     .show_inside(ui, |ui| {
                         // Title bar background drag/double-click action covering the entire bar area
                         let title_bar_rect = ui.max_rect();
@@ -575,16 +671,46 @@ impl eframe::App for MainApp {
 
                         ui.horizontal(|ui| {
                             // Traffic lights window controls
+                            let is_focused = ui.ctx().input(|i| i.focused);
+                            
+                            // Detect if pointer is hovering over the traffic lights group
+                            // Total size: 12.0 * 3 + 8.0 * 2 = 52.0 px
+                            let start_pos = ui.next_widget_position();
+                            let traffic_lights_rect = egui::Rect::from_min_size(start_pos, egui::vec2(52.0, 12.0));
+                            let area_response = ui.interact(
+                                traffic_lights_rect,
+                                ui.id().with("traffic_lights_area"),
+                                egui::Sense::hover()
+                            );
+                            let is_any_hovered = area_response.hovered();
+
                             ui.horizontal(|ui| {
-                                if circle_button(ui, egui::Color32::from_rgb(255, 95, 86)).on_hover_text("Close").clicked() {
+                                if circle_button(ui, TrafficLightType::Close, is_any_hovered, is_focused)
+                                    .on_hover_text("Close")
+                                    .clicked()
+                                {
                                     ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
                                 }
-                                ui.add_space(2.0);
-                                if circle_button(ui, egui::Color32::from_rgb(255, 189, 46)).on_hover_text("Minimize").clicked() {
-                                    ui.ctx().send_viewport_cmd(egui::ViewportCommand::Minimized(true));
+                                ui.add_space(8.0);
+                                if circle_button(ui, TrafficLightType::Minimize, is_any_hovered, is_focused)
+                                    .on_hover_text("Minimize")
+                                    .clicked()
+                                {
+                                    ui.ctx().input_mut(|i| {
+                                        i.events.push(egui::Event::PointerButton {
+                                            pos: egui::pos2(-1.0, -1.0),
+                                            button: egui::PointerButton::Primary,
+                                            pressed: false,
+                                            modifiers: egui::Modifiers::default(),
+                                        });
+                                    });
+                                    minimize_window(ui.ctx());
                                 }
-                                ui.add_space(2.0);
-                                if circle_button(ui, egui::Color32::from_rgb(39, 201, 63)).on_hover_text("Maximize").clicked() {
+                                ui.add_space(8.0);
+                                if circle_button(ui, TrafficLightType::Maximize, is_any_hovered, is_focused)
+                                    .on_hover_text("Maximize")
+                                    .clicked()
+                                {
                                     let is_maximized = ui.ctx().input(|i| i.viewport().maximized.unwrap_or(false));
                                     ui.ctx().send_viewport_cmd(egui::ViewportCommand::Maximized(!is_maximized));
                                 }

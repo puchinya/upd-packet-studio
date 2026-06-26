@@ -21,4 +21,7 @@ lto = true
 codegen-units = 1
 panic = "abort"
 
+[target.'cfg(target_os = "macos")'.dependencies]
+objc = "0.2.7"
+
 
