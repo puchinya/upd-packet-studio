@@ -701,16 +701,30 @@ impl eframe::App for MainApp {
                             // Traffic lights window controls
                             let is_focused = ui.ctx().input(|i| i.focused);
                             
-                            // Detect if pointer is hovering over the traffic lights group
-                            // Total size: 12.0 * 3 + 8.0 * 2 = 52.0 px
-                            let start_pos = ui.next_widget_position();
-                            let traffic_lights_rect = egui::Rect::from_min_size(start_pos, egui::vec2(52.0, 12.0));
-                            let area_response = ui.interact(
+                            // Detect if pointer is hovering over the traffic lights group.
+                            // Use pointer_hover_pos() directly so we can build the rect *after*
+                            // the inner horizontal() has allocated space, ensuring the Y range
+                            // matches the actual rendered button positions (egui centers widgets
+                            // vertically in a horizontal layout, so next_widget_position() alone
+                            // gives the wrong Y origin).
+                            let row_top = ui.next_widget_position().y;
+                            let row_height = ui.available_height();
+                            let row_x_start = ui.next_widget_position().x;
+                            // Width: 12 * 3 buttons + 8 * 2 gaps = 52 px
+                            let traffic_lights_rect = egui::Rect::from_min_max(
+                                egui::pos2(row_x_start, row_top),
+                                egui::pos2(row_x_start + 52.0, row_top + row_height),
+                            );
+                            let is_any_hovered = ui.ctx().pointer_hover_pos()
+                                .map(|p| traffic_lights_rect.contains(p))
+                                .unwrap_or(false);
+
+                            // Allocate the interact region so egui still processes it correctly
+                            let _area_response = ui.interact(
                                 traffic_lights_rect,
                                 ui.id().with("traffic_lights_area"),
                                 egui::Sense::hover()
                             );
-                            let is_any_hovered = area_response.hovered();
 
                             ui.horizontal(|ui| {
                                 if circle_button(ui, TrafficLightType::Close, is_any_hovered, is_focused)
