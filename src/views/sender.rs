@@ -1,6 +1,6 @@
 use eframe::egui;
 use crate::UdpStudioState;
-use crate::types::{PacketDefinition, PayloadType, generate_id};
+use crate::types::{PacketDefinition, PayloadType, generate_id, validate_payload};
 
 impl UdpStudioState {
     pub fn generate_echonet_lite_hex(&self) -> Result<String, String> {
@@ -253,13 +253,23 @@ impl UdpStudioState {
                 if response.changed() {
                     self.save_config();
                 }
+
+                let payload_validation = validate_payload(&self.composer_payload, self.composer_payload_type);
+                if let Err(ref err_msg) = payload_validation {
+                    ui.add_space(4.0);
+                    ui.colored_label(
+                        egui::Color32::from_rgb(255, 100, 100),
+                        format!("⚠️ Invalid payload format: {}", err_msg)
+                    );
+                }
                 
                 ui.add_space(15.0);
                 
                 ui.horizontal(|ui| {
                     let is_bound = self.is_listening;
+                    let is_payload_valid = payload_validation.is_ok();
                     let send_btn = ui.add_enabled(
-                        is_bound, 
+                        is_bound && is_payload_valid, 
                         egui::Button::new("🚀 Send").min_size(egui::vec2(120.0, 32.0))
                     );
                     

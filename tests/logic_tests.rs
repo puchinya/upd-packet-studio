@@ -2,7 +2,7 @@ use std::net::SocketAddr;
 use std::sync::mpsc::channel;
 use chrono::Local;
 use udp_packet_studio::UdpStudioState;
-use udp_packet_studio::types::{LogEntry, LogDirection, PayloadType, LogExportFormat, InspectorProtocol, AboutTab};
+use udp_packet_studio::types::{LogEntry, LogDirection, PayloadType, LogExportFormat, InspectorProtocol, AboutTab, validate_payload};
 use udp_packet_studio::udp_worker::UdpWorker;
 use udp_packet_studio::views::collections::{YamlCollection, YamlRequest};
 use udp_packet_studio::views::log_viewer::write_pcap_helper;
@@ -229,4 +229,18 @@ fn test_write_pcap_helper() {
 
     // Clean up
     let _ = std::fs::remove_file(path);
+}
+
+#[test]
+fn test_validate_payload() {
+    // Test text validation
+    assert!(validate_payload("Hello", PayloadType::Text).is_ok());
+    assert!(validate_payload("", PayloadType::Text).is_err());
+
+    // Test hex validation
+    assert!(validate_payload("12 34 ab CD", PayloadType::Hex).is_ok());
+    assert!(validate_payload("12:34-ab,CD", PayloadType::Hex).is_ok());
+    assert!(validate_payload("", PayloadType::Hex).is_err()); // empty
+    assert!(validate_payload("12 3", PayloadType::Hex).is_err()); // odd length
+    assert!(validate_payload("12 3x", PayloadType::Hex).is_err()); // invalid char 'x'
 }

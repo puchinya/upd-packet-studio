@@ -149,6 +149,46 @@ pub fn parse_hex_to_bytes(hex_str: &str) -> Result<Vec<u8>, String> {
     Ok(bytes)
 }
 
+pub fn validate_payload(payload: &str, payload_type: PayloadType) -> Result<Vec<u8>, String> {
+    match payload_type {
+        PayloadType::Text => {
+            if payload.is_empty() {
+                Err("Payload cannot be empty.".to_string())
+            } else {
+                Ok(payload.as_bytes().to_vec())
+            }
+        }
+        PayloadType::Hex => {
+            let has_invalid_chars = payload.chars().any(|c| {
+                !c.is_ascii_hexdigit()
+                    && !c.is_whitespace()
+                    && c != ':'
+                    && c != '-'
+                    && c != ','
+            });
+            if has_invalid_chars {
+                return Err("Contains invalid characters (only hex digits, spaces, and delimiters :, -, are allowed).".to_string());
+            }
+            match parse_hex_to_bytes(payload) {
+                Ok(bytes) => {
+                    if bytes.is_empty() {
+                        Err("Payload cannot be empty.".to_string())
+                    } else {
+                        Ok(bytes)
+                    }
+                }
+                Err(e) => {
+                    if e.contains("must have an even number") {
+                        Err("Hex string must have an even number of hex digits (excluding spaces).".to_string())
+                    } else {
+                        Err(format!("Invalid hex pair: {}", e))
+                    }
+                }
+            }
+        }
+    }
+}
+
 // Helper utility: generate pseudo-UUIDs based on timestamp
 pub fn generate_id() -> String {
     use std::time::SystemTime;

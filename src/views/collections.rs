@@ -1,6 +1,6 @@
 use eframe::egui;
 use crate::UdpStudioState;
-use crate::types::{Collection, PacketDefinition, PayloadType, generate_id};
+use crate::types::{Collection, PacketDefinition, PayloadType, generate_id, validate_payload};
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct YamlRequest {
@@ -149,9 +149,12 @@ impl UdpStudioState {
                                                 if ui.button("🗑").on_hover_text("Delete Request").clicked() {
                                                     delete_request = Some((collection.id.clone(), req.id.clone()));
                                                 }
-                                                if ui.button("🚀").on_hover_text("Send Packets").clicked() {
-                                                    send_trigger = Some((req.target.clone(), req.payload_type, req.payload.clone()));
-                                                }
+                                                 let is_payload_valid = validate_payload(&req.payload, req.payload_type).is_ok();
+                                                 let send_btn = ui.add_enabled(is_payload_valid, egui::Button::new("🚀"));
+                                                 let send_btn = send_btn.on_hover_text(if is_payload_valid { "Send Packets" } else { "Invalid payload format" });
+                                                 if send_btn.clicked() {
+                                                     send_trigger = Some((req.target.clone(), req.payload_type, req.payload.clone()));
+                                                 }
                                             });
                                         });
                                     }
@@ -228,13 +231,27 @@ impl UdpStudioState {
                     if response.changed() {
                         needs_save = true;
                     }
+
+                    let payload_validation = validate_payload(&req.payload, req.payload_type);
+                    if let Err(ref err_msg) = payload_validation {
+                        ui.add_space(4.0);
+                        ui.colored_label(
+                            egui::Color32::from_rgb(255, 100, 100),
+                            format!("⚠️ Invalid payload format: {}", err_msg)
+                        );
+                    }
                     
                     ui.add_space(8.0);
                     ui.horizontal(|ui| {
                         if ui.button("📂 Load to Composer").clicked() {
                             load_to_composer = Some((req.target.clone(), req.payload_type, req.payload.clone()));
                         }
-                        if ui.button("🚀 Send").clicked() {
+                        let is_payload_valid = payload_validation.is_ok();
+                        let send_btn = ui.add_enabled(
+                            is_payload_valid,
+                            egui::Button::new("🚀 Send")
+                        );
+                        if send_btn.clicked() {
                             send_trigger = Some((req.target.clone(), req.payload_type, req.payload.clone()));
                         }
                     });
