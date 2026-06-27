@@ -1,0 +1,6 @@
+<svg viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Flat Dark Navy Squircle -->
+  <rect x="100" y="100" width="824" height="824" rx="180" ry="180" fill="#061d3a"/>
+  <!-- Bold Clean Text -->
+  <text x="512" y="585" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif" font-weight="900" font-size="300" fill="#ffffff" text-anchor="middle" dominant-baseline="middle">UDP</text>
+</svg>
