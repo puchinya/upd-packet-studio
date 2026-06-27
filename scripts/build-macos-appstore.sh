@@ -96,6 +96,10 @@ if [ -z "$INSTALLER_IDENTITY" ]; then
   INSTALLER_IDENTITY=$(security find-identity -v | grep "3rd Party Mac Developer Installer\|Mac Installer Distribution" | head -n 1 | awk -F '"' '{print $2}')
 fi
 
+# 0b. Remove extended attributes (like com.apple.quarantine) from the app bundle
+echo "Removing extended attributes (quarantine) from bundle..."
+xattr -cr "${APP_BUNDLE}"
+
 # 1. Embed provisioning profile
 if [ -z "$PROVISIONING_PROFILE" ]; then
   # Search for any .provisionprofile file in current directory or scripts/
