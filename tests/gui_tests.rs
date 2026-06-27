@@ -98,6 +98,7 @@ fn test_gui_triggered_communication() {
     use std::net::UdpSocket;
     use std::sync::mpsc::channel;
     use udp_packet_studio::UdpStudioState;
+    use udp_packet_studio::locales::LanguageSetting;
     use udp_packet_studio::types::{PayloadType, LoggerCommand, LogExportFormat, InspectorProtocol, AboutTab};
     use udp_packet_studio::udp_worker::{UdpWorker, UdpCommand, UdpEvent};
 
@@ -162,6 +163,7 @@ fn test_gui_triggered_communication() {
         about_open: false,
         about_tab: AboutTab::Info,
         tx_logger,
+        language_setting: LanguageSetting::English,
     };
 
     // Frame 1: Render the GUI to determine button layout & coordinate
@@ -227,6 +229,7 @@ fn test_collections_gui_interactions() {
     use std::net::UdpSocket;
     use std::sync::mpsc::channel;
     use udp_packet_studio::UdpStudioState;
+    use udp_packet_studio::locales::LanguageSetting;
     use udp_packet_studio::types::{PayloadType, LoggerCommand, LogExportFormat, InspectorProtocol, AboutTab, Collection, PacketDefinition};
     use udp_packet_studio::udp_worker::{UdpWorker, UdpCommand, UdpEvent};
 
@@ -308,6 +311,7 @@ fn test_collections_gui_interactions() {
         about_open: false,
         about_tab: AboutTab::Info,
         tx_logger,
+        language_setting: LanguageSetting::English,
     };
 
     // ----------------------------------------------------

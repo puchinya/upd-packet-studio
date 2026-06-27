@@ -5,6 +5,7 @@ pub mod types;
 pub mod config;
 pub mod styling;
 pub mod views;
+pub mod locales;
 
 use std::net::SocketAddr;
 use std::sync::mpsc::{Receiver, Sender, channel};
@@ -17,6 +18,7 @@ use udp_worker::{UdpWorker, UdpCommand, UdpEvent};
 use types::{Tab, LogEntry, LogDirection, PayloadType, parse_hex_to_bytes, Collection, MulticastGroup, InspectorProtocol, LogExportFormat, LoggerCommand, AboutTab};
 use config::SavedConfig;
 use styling::setup_custom_styles;
+use locales::LanguageSetting;
 
 pub struct UdpStudioState {
     pub collections: Vec<Collection>,
@@ -74,9 +76,30 @@ pub struct UdpStudioState {
     pub about_open: bool,
     pub about_tab: AboutTab,
     pub tx_logger: Sender<LoggerCommand>,
+    pub language_setting: LanguageSetting,
 }
 
 impl UdpStudioState {
+    pub fn language_id(&self) -> String {
+        crate::locales::resolve_language(self.language_setting)
+    }
+
+    pub fn tr(&self, key: &str) -> String {
+        crate::locales::init_translations();
+        egui_i18n::set_language(&self.language_id());
+        egui_i18n::tr!(key)
+    }
+
+    pub fn tr_with_args(&self, key: &str, args: &std::collections::HashMap<std::borrow::Cow<'static, str>, egui_i18n::fluent_bundle::FluentValue<'_>>) -> String {
+        crate::locales::init_translations();
+        egui_i18n::set_language(&self.language_id());
+        let mut fluent_args = egui_i18n::fluent::FluentArgs::new();
+        for (k, v) in args {
+            fluent_args.set(k.as_ref(), v.clone());
+        }
+        egui_i18n::translate_fluent(key, &fluent_args)
+    }
+
     pub(crate) fn save_config(&self) {
         #[cfg(not(test))]
         {
@@ -89,6 +112,7 @@ impl UdpStudioState {
                 auto_save_enabled: self.auto_save_enabled,
                 auto_save_dir: self.auto_save_dir.clone(),
                 auto_save_format: self.auto_save_format,
+                language_setting: self.language_setting,
             };
             config.save();
         }
@@ -176,11 +200,11 @@ impl<'a> egui_dock::TabViewer for MyTabViewer<'a> {
 
     fn title(&mut self, tab: &mut Self::Tab) -> egui::WidgetText {
         match tab {
-            Tab::Collections => "📁 Collections".into(),
-            Tab::Sender => "🚀 Composer".into(),
-            Tab::LogViewer => "📊 Logs".into(),
-            Tab::Inspector => "🔍 Inspector".into(),
-            Tab::Multicast => "🌐 Multicast".into(),
+            Tab::Collections => self.state.tr("tabs-collections").into(),
+            Tab::Sender => self.state.tr("tabs-composer").into(),
+            Tab::LogViewer => self.state.tr("tabs-logs").into(),
+            Tab::Inspector => self.state.tr("tabs-inspector").into(),
+            Tab::Multicast => self.state.tr("tabs-multicast").into(),
         }
     }
 
@@ -460,6 +484,7 @@ impl MainApp {
             about_open: false,
             about_tab: AboutTab::Info,
             tx_logger,
+            language_setting: config.language_setting,
         };
 
         Self {
@@ -729,7 +754,7 @@ impl eframe::App for MainApp {
                             ui.add_space(15.0);
                             
                             // Integrated Socket Bind Controls
-                            ui.label("Bind Address:");
+                            ui.label(self.state.tr("titlebar-bind-addr"));
                             let text_res = ui.add(egui::TextEdit::singleline(&mut self.state.listener_addr).desired_width(130.0));
                             if text_res.changed() {
                                 self.state.save_config();
@@ -738,21 +763,21 @@ impl eframe::App for MainApp {
                             ui.add_space(5.0);
                             
                             if self.state.is_listening {
-                                if ui.button("⏹ Stop").clicked() {
+                                if ui.button(self.state.tr("titlebar-btn-stop")).clicked() {
                                     self.state.udp_worker.send(UdpCommand::Unbind);
                                 }
                                 ui.add_space(5.0);
-                                ui.colored_label(egui::Color32::from_rgb(100, 255, 100), "🟢 Active");
+                                ui.colored_label(egui::Color32::from_rgb(100, 255, 100), self.state.tr("titlebar-status-active"));
                                 if let Some(ref addr) = self.state.bound_addr {
                                     ui.label(format!("({})", addr));
                                 }
                             } else {
-                                if ui.button("▶ Bind").clicked() {
+                                if ui.button(self.state.tr("titlebar-btn-bind")).clicked() {
                                     self.state.listener_error = None;
                                     self.state.udp_worker.send(UdpCommand::Bind(self.state.listener_addr.clone()));
                                 }
                                 ui.add_space(5.0);
-                                ui.colored_label(egui::Color32::from_rgb(255, 90, 90), "🔴 Offline");
+                                ui.colored_label(egui::Color32::from_rgb(255, 90, 90), self.state.tr("titlebar-status-offline"));
                             }
                             
                             if let Some(ref err) = self.state.listener_error {
@@ -763,11 +788,11 @@ impl eframe::App for MainApp {
                             // Align settings button to the right end of title bar
                             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                                 ui.menu_button("⚙", |ui| {
-                                    if ui.button("Preferences...").clicked() {
+                                    if ui.button(self.state.tr("titlebar-preferences")).clicked() {
                                         self.state.settings_open = true;
                                         ui.close();
                                     }
-                                    if ui.button("About...").clicked() {
+                                    if ui.button(self.state.tr("titlebar-about")).clicked() {
                                         self.state.about_open = true;
                                         self.state.about_tab = AboutTab::Info;
                                         ui.close();
@@ -791,26 +816,31 @@ impl eframe::App for MainApp {
                     .show_inside(ui, |ui| {
                         ui.horizontal(|ui| {
                             if self.state.is_listening {
-                                ui.colored_label(egui::Color32::from_rgb(100, 255, 100), "🟢 Active");
+                                ui.colored_label(egui::Color32::from_rgb(100, 255, 100), self.state.tr("titlebar-status-active"));
                                 if let Some(ref addr) = self.state.bound_addr {
-                                    ui.label(format!("Bound: {}", addr));
+                                    let mut args = std::collections::HashMap::new();
+                                    args.insert(std::borrow::Cow::Borrowed("addr"), addr.clone().into());
+                                    ui.label(self.state.tr_with_args("statusbar-bound", &args));
                                 }
                                 ui.add_space(10.0);
                                 ui.separator();
                                 ui.add_space(10.0);
-                                ui.colored_label(egui::Color32::from_rgb(140, 200, 255), "📣 Broadcast Enabled");
+                                ui.colored_label(egui::Color32::from_rgb(140, 200, 255), self.state.tr("statusbar-broadcast"));
                             } else {
-                                ui.colored_label(egui::Color32::from_rgb(255, 90, 90), "🔴 Offline");
-                                ui.label("Socket not bound");
+                                ui.colored_label(egui::Color32::from_rgb(255, 90, 90), self.state.tr("titlebar-status-offline"));
+                                ui.label(self.state.tr("statusbar-not-bound"));
                             }
                             
                             ui.add_space(10.0);
                             ui.separator();
                             ui.add_space(10.0);
+                            
                             let auto_save_text = if self.state.auto_save_enabled {
-                                format!("💾 Auto-Save: Enabled ({:?})", self.state.auto_save_format)
+                                let mut args = std::collections::HashMap::new();
+                                args.insert(std::borrow::Cow::Borrowed("format"), format!("{:?}", self.state.auto_save_format).into());
+                                self.state.tr_with_args("statusbar-auto-save-enabled", &args)
                             } else {
-                                "💾 Auto-Save: Disabled".to_string()
+                                self.state.tr("statusbar-auto-save-disabled")
                             };
                             let auto_save_color = if self.state.auto_save_enabled {
                                 egui::Color32::from_rgb(100, 255, 100)
@@ -827,7 +857,7 @@ impl eframe::App for MainApp {
                             );
                             
                             let label_resp = label_resp.on_hover_cursor(egui::CursorIcon::PointingHand)
-                                .on_hover_text("Click to toggle auto-save");
+                                .on_hover_text(self.state.tr("statusbar-auto-save-tip"));
 
                             if label_resp.clicked() {
                                 self.state.auto_save_enabled = !self.state.auto_save_enabled;
@@ -841,14 +871,14 @@ impl eframe::App for MainApp {
                             
                             let folder_resp = ui.add(
                                 egui::Label::new(
-                                    egui::RichText::new("📁 Open Log Folder")
+                                    egui::RichText::new(self.state.tr("statusbar-open-log-dir"))
                                         .color(egui::Color32::from_rgb(140, 200, 255))
                                 )
                                 .sense(egui::Sense::click())
                             );
                             
                             let folder_resp = folder_resp.on_hover_cursor(egui::CursorIcon::PointingHand)
-                                .on_hover_text("Click to open auto-save directory");
+                                .on_hover_text(self.state.tr("statusbar-open-log-dir-tip"));
 
                             if folder_resp.clicked() {
                                 let dir = &self.state.auto_save_dir;
@@ -878,7 +908,9 @@ impl eframe::App for MainApp {
                             }
                             
                             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                ui.label(format!("Logged packets: {}", self.state.logs.len()));
+                                let mut args = std::collections::HashMap::new();
+                                args.insert(std::borrow::Cow::Borrowed("count"), self.state.logs.len().into());
+                                ui.label(self.state.tr_with_args("statusbar-logged-packets", &args));
                             });
                         });
                     });
@@ -933,17 +965,60 @@ impl eframe::App for MainApp {
         if self.state.settings_open {
             let mut open = self.state.settings_open;
             let mut close_clicked = false;
-            egui::Window::new("⚙ Preferences")
+            
+            // Retrieve all translations upfront to satisfy borrow checker
+            let settings_title = self.state.tr("settings-title");
+            let lang_section = self.state.tr("settings-lang-section");
+            let lang_label = self.state.tr("settings-lang-label");
+            let selected_lang_text = self.state.language_setting.to_display_name();
+            let system_display = LanguageSetting::System.to_display_name();
+            let ja_display = LanguageSetting::Japanese.to_display_name();
+            let en_display = LanguageSetting::English.to_display_name();
+            
+            let auto_save_section = self.state.tr("settings-auto-save-section");
+            let auto_save_enable = self.state.tr("settings-auto-save-enable");
+            let auto_save_format_label = self.state.tr("settings-auto-save-format");
+            let auto_save_dir_label = self.state.tr("settings-auto-save-dir");
+            let browse_btn_label = self.state.tr("settings-browse");
+            let close_btn_label = self.state.tr("settings-close");
+
+            egui::Window::new(settings_title)
                 .open(&mut open)
                 .resizable(false)
                 .collapsible(false)
                 .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
                 .show(&ctx, |ui| {
                     ui.vertical(|ui| {
-                        ui.heading("Log Auto-Save Settings");
+                        // Language Settings
+                        ui.heading(lang_section);
                         ui.add_space(4.0);
                         
-                        let checkbox_res = ui.checkbox(&mut self.state.auto_save_enabled, "Enable log auto-save");
+                        ui.horizontal(|ui| {
+                            ui.label(lang_label);
+                            
+                            let combo_lang_res = egui::ComboBox::from_id_salt("settings_language")
+                                .selected_text(selected_lang_text)
+                                .show_ui(ui, |ui| {
+                                    let mut changed = false;
+                                    changed |= ui.selectable_value(&mut self.state.language_setting, LanguageSetting::System, system_display).changed();
+                                    changed |= ui.selectable_value(&mut self.state.language_setting, LanguageSetting::Japanese, ja_display).changed();
+                                    changed |= ui.selectable_value(&mut self.state.language_setting, LanguageSetting::English, en_display).changed();
+                                    changed
+                                });
+                            if combo_lang_res.inner.unwrap_or(false) {
+                                self.state.save_config();
+                            }
+                        });
+                        
+                        ui.add_space(12.0);
+                        ui.separator();
+                        ui.add_space(12.0);
+
+                        // Log Auto-Save Settings
+                        ui.heading(auto_save_section);
+                        ui.add_space(4.0);
+                        
+                        let checkbox_res = ui.checkbox(&mut self.state.auto_save_enabled, auto_save_enable);
                         if checkbox_res.changed() {
                             self.state.save_config();
                             self.state.update_logger_config();
@@ -951,7 +1026,7 @@ impl eframe::App for MainApp {
                         
                         ui.add_space(8.0);
                         
-                        ui.label("Log Format:");
+                        ui.label(auto_save_format_label);
                         let combo_res = egui::ComboBox::from_id_salt("settings_auto_save_format")
                             .selected_text(match self.state.auto_save_format {
                                 LogExportFormat::Csv => "CSV",
@@ -972,7 +1047,7 @@ impl eframe::App for MainApp {
                         
                         ui.add_space(8.0);
                         
-                        ui.label("Save Directory:");
+                        ui.label(auto_save_dir_label);
                         ui.horizontal(|ui| {
                             let dir_res = ui.add(egui::TextEdit::singleline(&mut self.state.auto_save_dir).desired_width(300.0));
                             if dir_res.changed() {
@@ -980,7 +1055,7 @@ impl eframe::App for MainApp {
                                 self.state.update_logger_config();
                             }
                             
-                            if ui.button("📁 Browse...").clicked() {
+                            if ui.button(browse_btn_label).clicked() {
                                 if let Some(path) = rfd::FileDialog::new()
                                     .set_directory(&self.state.auto_save_dir)
                                     .pick_folder()
@@ -997,7 +1072,7 @@ impl eframe::App for MainApp {
                         ui.add_space(8.0);
                         
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                            if ui.button("Close").clicked() {
+                            if ui.button(close_btn_label).clicked() {
                                 close_clicked = true;
                             }
                         });

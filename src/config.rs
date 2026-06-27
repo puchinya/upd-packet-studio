@@ -1,5 +1,10 @@
 use crate::types::{Collection, PacketDefinition, PayloadType, LogExportFormat};
 use serde::{Serialize, Deserialize};
+use crate::locales::LanguageSetting;
+
+fn default_language_setting() -> LanguageSetting {
+    LanguageSetting::System
+}
 
 fn default_auto_save_enabled() -> bool {
     false
@@ -30,6 +35,8 @@ pub struct SavedConfig {
     pub auto_save_dir: String,
     #[serde(default = "default_auto_save_format")]
     pub auto_save_format: LogExportFormat,
+    #[serde(default = "default_language_setting")]
+    pub language_setting: LanguageSetting,
 }
 
 fn config_path() -> Option<std::path::PathBuf> {
@@ -107,6 +114,7 @@ impl SavedConfig {
             auto_save_enabled: false,
             auto_save_dir: default_auto_save_dir(),
             auto_save_format: LogExportFormat::Csv,
+            language_setting: LanguageSetting::System,
         }
     }
 

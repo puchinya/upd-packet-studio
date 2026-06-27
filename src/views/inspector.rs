@@ -10,6 +10,21 @@ struct EchonetProperty {
 
 impl UdpStudioState {
     pub fn show_inspector(&mut self, ui: &mut egui::Ui) {
+        crate::locales::init_translations();
+        let lang_id = self.language_id();
+        let tr = |key: &str| {
+            egui_i18n::set_language(&lang_id);
+            egui_i18n::tr!(key)
+        };
+        let tr_args = |key: &str, args: &std::collections::HashMap<std::borrow::Cow<'static, str>, egui_i18n::fluent_bundle::FluentValue<'_>>| {
+            egui_i18n::set_language(&lang_id);
+            let mut fluent_args = egui_i18n::fluent::FluentArgs::new();
+            for (k, v) in args {
+                fluent_args.set(k.as_ref(), v.clone());
+            }
+            egui_i18n::translate_fluent(key, &fluent_args)
+        };
+
         ui.vertical(|ui| {
             if let Some(idx) = self.selected_log_idx {
                 if idx < self.logs.len() {
@@ -17,27 +32,31 @@ impl UdpStudioState {
                     
                     // Selected log metadata header
                     ui.horizontal(|ui| {
-                        ui.label(format!("Timestamp: {}", entry.timestamp.format("%Y-%m-%d %H:%M:%S.%3f")));
+                        let mut args_ts = std::collections::HashMap::new();
+                        args_ts.insert(std::borrow::Cow::Borrowed("ts"), entry.timestamp.format("%Y-%m-%d %H:%M:%S.%3f").to_string().into());
+                        ui.label(tr_args("ins-label-timestamp", &args_ts));
                         ui.separator();
                         let dir_label = match entry.direction {
-                            LogDirection::Sent => "Sent To:",
-                            LogDirection::Received => "Received From:",
-                            LogDirection::SystemInfo => "Event target:",
-                            LogDirection::SystemError => "Error target:",
+                            LogDirection::Sent => tr("ins-label-sent-to"),
+                            LogDirection::Received => tr("ins-label-received-from"),
+                            LogDirection::SystemInfo => tr("ins-label-event-target"),
+                            LogDirection::SystemError => tr("ins-label-error-target"),
                         };
                         ui.label(format!("{} {}", dir_label, entry.address));
                         ui.separator();
-                        ui.label(format!("Size: {} bytes", entry.data.len()));
+                        let mut args_size = std::collections::HashMap::new();
+                        args_size.insert(std::borrow::Cow::Borrowed("len"), entry.data.len().into());
+                        ui.label(tr_args("ins-label-size", &args_size));
                     });
                     
                     ui.add_space(8.0);
                     
                     // Protocol Selector
                     ui.horizontal(|ui| {
-                        ui.label("Decode As:");
-                        ui.selectable_value(&mut self.inspector_protocol, InspectorProtocol::Raw, "🔌 Raw (Hex)");
-                        ui.selectable_value(&mut self.inspector_protocol, InspectorProtocol::TextAscii, "📝 Text (ASCII)");
-                        ui.selectable_value(&mut self.inspector_protocol, InspectorProtocol::EchonetLite, "💡 ECHONET Lite");
+                        ui.label(tr("ins-label-decode-as"));
+                        ui.selectable_value(&mut self.inspector_protocol, InspectorProtocol::Raw, tr("ins-proto-raw"));
+                        ui.selectable_value(&mut self.inspector_protocol, InspectorProtocol::TextAscii, tr("ins-proto-ascii"));
+                        ui.selectable_value(&mut self.inspector_protocol, InspectorProtocol::EchonetLite, tr("ins-proto-echonet"));
                     });
                     
                     ui.add_space(8.0);
@@ -47,7 +66,7 @@ impl UdpStudioState {
                     // Decode details
                     match self.inspector_protocol {
                         InspectorProtocol::Raw => {
-                            ui.label("Hex Dump View:");
+                            ui.label(tr("ins-title-hex-dump"));
                             ui.add_space(4.0);
                             egui::ScrollArea::vertical()
                                 .id_salt("hex_dump_scroll")
@@ -63,7 +82,7 @@ impl UdpStudioState {
                                 });
                         }
                         InspectorProtocol::TextAscii => {
-                            ui.label("ASCII Text View (with control code visualizers):");
+                            ui.label(tr("ins-title-ascii-view"));
                             ui.add_space(4.0);
                             egui::ScrollArea::vertical()
                                 .id_salt("ascii_scroll")
@@ -78,22 +97,24 @@ impl UdpStudioState {
                                 });
                         }
                         InspectorProtocol::EchonetLite => {
-                            ui.label("ECHONET Lite Protocol Decode:");
+                            ui.label(tr("ins-title-echonet-decode"));
                             ui.add_space(6.0);
                             
                             if entry.data.len() < 12 {
                                 ui.colored_label(
                                     egui::Color32::from_rgb(255, 100, 100),
-                                    "⚠️ Packet too short to be a valid ECHONET Lite frame (min 12 bytes)."
+                                    tr("ins-el-err-too-short")
                                 );
                             } else {
                                 let ehd1 = entry.data[0];
                                 let ehd2 = entry.data[1];
                                 
                                 if ehd1 != 0x10 {
+                                    let mut args = std::collections::HashMap::new();
+                                    args.insert(std::borrow::Cow::Borrowed("val"), format!("{:02X}", ehd1).into());
                                     ui.colored_label(
                                         egui::Color32::from_rgb(255, 180, 100),
-                                        format!("⚠️ EHD1 is 0x{:02X} (Expected 0x10 for ECHONET Lite)", ehd1)
+                                        tr_args("ins-el-warn-ehd1", &args)
                                     );
                                     ui.add_space(4.0);
                                 }
@@ -110,37 +131,40 @@ impl UdpStudioState {
                                     .num_columns(2)
                                     .spacing([12.0, 6.0])
                                     .show(ui, |ui| {
-                                        ui.label("EHD1 (Header 1):");
+                                        ui.label(tr("ins-el-label-ehd1"));
                                         ui.monospace(format!("0x{:02X} (ECHONET Lite)", ehd1));
                                         ui.end_row();
                                         
-                                        ui.label("EHD2 (Header 2):");
-                                        ui.monospace(format!("0x{:02X} (Format {})", ehd2, if ehd2 == 0x81 { "1" } else { "2" }));
+                                        ui.label(tr("ins-el-label-ehd2"));
+                                        let fmt_str = if ehd2 == 0x81 { "1" } else { "2" };
+                                        let mut args_fmt = std::collections::HashMap::new();
+                                        args_fmt.insert(std::borrow::Cow::Borrowed("fmt"), fmt_str.into());
+                                        ui.monospace(format!("0x{:02X} ({})", ehd2, tr_args("ins-el-format", &args_fmt)));
                                         ui.end_row();
                                         
-                                        ui.label("Transaction ID (TID):");
+                                        ui.label(tr("ins-el-label-tid"));
                                         ui.monospace(format!("0x{:02X}{:02X}", tid_h, tid_l));
                                         ui.end_row();
                                         
-                                        ui.label("Source Object (SEOJ):");
+                                        ui.label(tr("ins-el-label-seoj"));
                                         ui.label(translate_object(seoj));
                                         ui.end_row();
                                         
-                                        ui.label("Dest Object (DEOJ):");
+                                        ui.label(tr("ins-el-label-deoj"));
                                         ui.label(translate_object(deoj));
                                         ui.end_row();
                                         
-                                        ui.label("Service Code (ESV):");
+                                        ui.label(tr("ins-el-label-esv"));
                                         ui.label(translate_esv(esv));
                                         ui.end_row();
                                         
-                                        ui.label("Property Count (OPC):");
+                                        ui.label(tr("ins-el-label-opc"));
                                         ui.monospace(format!("{}", opc));
                                         ui.end_row();
                                     });
                                 
                                 ui.add_space(10.0);
-                                ui.strong("Parsed Properties:");
+                                ui.strong(tr("ins-el-title-props"));
                                 ui.add_space(4.0);
                                 
                                 // Parse properties
@@ -200,7 +224,7 @@ impl UdpStudioState {
                                     if is_malformed {
                                         ui.colored_label(
                                             egui::Color32::from_rgb(255, 100, 100),
-                                            "⚠️ Malformed ECHONET Lite properties: Packet truncated."
+                                            tr("ins-el-err-malformed")
                                         );
                                     }
                                 });
@@ -210,7 +234,7 @@ impl UdpStudioState {
                 }
             } else {
                 ui.centered_and_justified(|ui| {
-                    ui.label("Select a log item in the logs panel to inspect its contents");
+                    ui.label(tr("ins-select-log-item"));
                 });
             }
         });
@@ -244,92 +268,92 @@ fn to_ascii_inspector(bytes: &[u8]) -> String {
 // ECHONET Lite Translators
 fn translate_object(obj_bytes: &[u8]) -> String {
     if obj_bytes.len() != 3 {
-        return "Unknown".to_string();
+        return egui_i18n::tr!("ins-el-obj-unknown");
     }
     let group = obj_bytes[0];
     let class = obj_bytes[1];
     let instance = obj_bytes[2];
     
     let name = match (group, class) {
-        (0x05, 0xFF) => "Controller",
-        (0x0E, 0xF0) => "Node Profile",
-        (0x01, 0x30) => "Home Air Conditioner",
-        (0x02, 0x88) => "Smart Meter",
-        _ => "Custom/Unknown Device",
+        (0x05, 0xFF) => egui_i18n::tr!("ins-el-obj-controller"),
+        (0x0E, 0xF0) => egui_i18n::tr!("ins-el-obj-node"),
+        (0x01, 0x30) => egui_i18n::tr!("ins-el-obj-ac"),
+        (0x02, 0x88) => egui_i18n::tr!("ins-el-obj-meter"),
+        _ => egui_i18n::tr!("ins-el-obj-custom"),
     };
     format!("{} (0x{:02X} {:02X} {:02X})", name, group, class, instance)
 }
 
 fn translate_esv(esv: u8) -> String {
     match esv {
-        0x60 => "SetI (Set Property - No Response Required)".to_string(),
-        0x61 => "SetC (Set Property - Response Required)".to_string(),
-        0x62 => "Get (Get Property Value)".to_string(),
-        0x63 => "INF_REQ (Property Value Write Request)".to_string(),
-        0x71 => "Set_Res (Set Property Response)".to_string(),
-        0x72 => "Get_Res (Get Property Response)".to_string(),
-        0x73 => "INF (Inform Property Value)".to_string(),
-        0x74 => "INFC (Inform Property Value Response)".to_string(),
-        0x50 => "SetI_SNA (Set SNA - No Response)".to_string(),
-        0x51 => "SetC_SNA (Set SNA Response)".to_string(),
-        0x52 => "Get_SNA (Get SNA Response)".to_string(),
-        0x53 => "INF_SNA (Inform SNA Response)".to_string(),
-        _ => format!("Unknown Service (0x{:02X})", esv),
+        0x60 => egui_i18n::tr!("ins-el-esv-seti"),
+        0x61 => egui_i18n::tr!("ins-el-esv-setc"),
+        0x62 => egui_i18n::tr!("ins-el-esv-get"),
+        0x63 => egui_i18n::tr!("ins-el-esv-inf-req"),
+        0x71 => egui_i18n::tr!("ins-el-esv-set-res"),
+        0x72 => egui_i18n::tr!("ins-el-esv-get-res"),
+        0x73 => egui_i18n::tr!("ins-el-esv-inf"),
+        0x74 => egui_i18n::tr!("ins-el-esv-infc"),
+        0x50 => egui_i18n::tr!("ins-el-esv-seti-sna"),
+        0x51 => egui_i18n::tr!("ins-el-esv-setc-sna"),
+        0x52 => egui_i18n::tr!("ins-el-esv-get-sna"),
+        0x53 => egui_i18n::tr!("ins-el-esv-inf-sna"),
+        _ => egui_i18n::tr!("ins-el-esv-unknown", { esv: format!("{:02X}", esv) }),
     }
 }
 
 fn translate_epc(epc: u8) -> String {
     match epc {
-        0x80 => "-> Operation Status".to_string(),
-        0x81 => "-> Installation Location".to_string(),
-        0x82 => "-> Standard Version Info".to_string(),
-        0x83 => "-> Identification Number".to_string(),
-        0x88 => "-> Fault Status".to_string(),
-        0x8A => "-> Manufacturer Code".to_string(),
-        0xB0 => "-> Operation Mode".to_string(),
-        0xC0 => "-> Set Temperature".to_string(),
-        0xC1 => "-> Set Temp Cooling".to_string(),
-        0xD6 => "-> Self-node instance list".to_string(),
-        0xD7 => "-> Self-node class list".to_string(),
+        0x80 => egui_i18n::tr!("ins-el-epc-status"),
+        0x81 => egui_i18n::tr!("ins-el-epc-location"),
+        0x82 => egui_i18n::tr!("ins-el-epc-version"),
+        0x83 => egui_i18n::tr!("ins-el-epc-id"),
+        0x88 => egui_i18n::tr!("ins-el-epc-fault"),
+        0x8A => egui_i18n::tr!("ins-el-epc-manufacturer"),
+        0xB0 => egui_i18n::tr!("ins-el-epc-mode"),
+        0xC0 => egui_i18n::tr!("ins-el-epc-temp"),
+        0xC1 => egui_i18n::tr!("ins-el-epc-temp-cool"),
+        0xD6 => egui_i18n::tr!("ins-el-epc-node-instances"),
+        0xD7 => egui_i18n::tr!("ins-el-epc-node-classes"),
         _ => "".to_string(),
     }
 }
 
 fn translate_edt(epc: u8, edt: &[u8]) -> String {
     if edt.is_empty() {
-        return "Empty".to_string();
+        return egui_i18n::tr!("ins-el-edt-empty");
     }
     match epc {
         0x80 => {
             if edt[0] == 0x30 {
-                "ON (0x30)".to_string()
+                egui_i18n::tr!("ins-el-edt-on")
             } else if edt[0] == 0x31 {
-                "OFF (0x31)".to_string()
+                egui_i18n::tr!("ins-el-edt-off")
             } else {
-                format!("Unknown (0x{:02X})", edt[0])
+                egui_i18n::tr!("ins-el-edt-unknown", { val: format!("{:02X}", edt[0]) })
             }
         }
         0x88 => {
             if edt[0] == 0x41 {
-                "Fault (0x41)".to_string()
+                egui_i18n::tr!("ins-el-edt-fault")
             } else if edt[0] == 0x42 {
-                "Normal (0x42)".to_string()
+                egui_i18n::tr!("ins-el-edt-normal")
             } else {
-                format!("Unknown (0x{:02X})", edt[0])
+                egui_i18n::tr!("ins-el-edt-unknown", { val: format!("{:02X}", edt[0]) })
             }
         }
         0xB0 => {
             match edt[0] {
-                0x41 => "Automatic (0x41)".to_string(),
-                0x42 => "Cooling (0x42)".to_string(),
-                0x43 => "Heating (0x43)".to_string(),
-                0x44 => "Dehumidifying (0x44)".to_string(),
-                0x45 => "Air Circulator (0x45)".to_string(),
-                _ => format!("Unknown (0x{:02X})", edt[0]),
+                0x41 => egui_i18n::tr!("ins-el-edt-auto"),
+                0x42 => egui_i18n::tr!("ins-el-edt-cool"),
+                0x43 => egui_i18n::tr!("ins-el-edt-heat"),
+                0x44 => egui_i18n::tr!("ins-el-edt-dehumid"),
+                0x45 => egui_i18n::tr!("ins-el-edt-circulator"),
+                _ => egui_i18n::tr!("ins-el-edt-unknown", { val: format!("{:02X}", edt[0]) }),
             }
         }
         0xC0 | 0xC1 => {
-            format!("{} °C (0x{:02X})", edt[0], edt[0])
+            egui_i18n::tr!("ins-el-edt-temp", { temp: edt[0].to_string(), val: format!("{:02X}", edt[0]) })
         }
         _ => {
             edt.iter().map(|b| format!("{:02X}", b)).collect::<Vec<String>>().join(" ")

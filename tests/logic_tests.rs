@@ -51,6 +51,7 @@ fn make_test_state() -> UdpStudioState {
         about_open: false,
         about_tab: AboutTab::Info,
         tx_logger,
+        language_setting: udp_packet_studio::locales::LanguageSetting::English,
     }
 }
 

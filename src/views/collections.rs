@@ -20,6 +20,21 @@ pub struct YamlCollection {
 
 impl UdpStudioState {
     pub fn show_collections(&mut self, ui: &mut egui::Ui) {
+        crate::locales::init_translations();
+        let lang_id = self.language_id();
+        let tr = |key: &str| {
+            egui_i18n::set_language(&lang_id);
+            egui_i18n::tr!(key)
+        };
+        let tr_args = |key: &str, args: &std::collections::HashMap<std::borrow::Cow<'static, str>, egui_i18n::fluent_bundle::FluentValue<'_>>| {
+            egui_i18n::set_language(&lang_id);
+            let mut fluent_args = egui_i18n::fluent::FluentArgs::new();
+            for (k, v) in args {
+                fluent_args.set(k.as_ref(), v.clone());
+            }
+            egui_i18n::translate_fluent(key, &fluent_args)
+        };
+
         let mut toggle_expand = None;
         let mut create_collection = false;
         let mut delete_collection = None;
@@ -35,10 +50,10 @@ impl UdpStudioState {
         ui.vertical(|ui| {
             // Header
             ui.horizontal(|ui| {
-                if ui.button("➕ New").on_hover_text("Create a new empty collection").clicked() {
+                if ui.button(tr("collections-new")).on_hover_text(tr("collections-new-tip")).clicked() {
                     create_collection = true;
                 }
-                if ui.button("📥 Import").on_hover_text("Import a collection from a YAML file").clicked() {
+                if ui.button(tr("collections-import")).on_hover_text(tr("collections-import-tip")).clicked() {
                     import_collection = true;
                 }
             });
@@ -56,7 +71,7 @@ impl UdpStudioState {
                 egui::ScrollArea::vertical().id_salt("collections_scroll").show(ui, |ui| {
                     if self.collections.is_empty() {
                         ui.add_space(10.0);
-                        ui.colored_label(egui::Color32::from_rgb(120, 130, 140), egui::RichText::new("No collections. Click 'New Collection' to start!").italics());
+                        ui.colored_label(egui::Color32::from_rgb(120, 130, 140), egui::RichText::new(tr("collections-empty-list")).italics());
                     } else {
                         for col_idx in 0..self.collections.len() {
                             let collection = &mut self.collections[col_idx];
@@ -76,7 +91,7 @@ impl UdpStudioState {
                                     egui::TextEdit::singleline(&mut collection.name)
                                         .frame(egui::Frame::NONE)
                                         .desired_width(ui.available_width() - 85.0)
-                                        .hint_text("Unnamed Collection")
+                                        .hint_text(tr("collections-unnamed-col"))
                                 );
                                 if name_edit.changed() {
                                     needs_save = true;
@@ -84,13 +99,13 @@ impl UdpStudioState {
                                 
                                 // Hover actions on the right
                                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                    if ui.button("🗑").on_hover_text("Delete Collection").clicked() {
+                                    if ui.button("🗑").on_hover_text(tr("collections-del-col-tip")).clicked() {
                                         delete_collection = Some(collection.id.clone());
                                     }
-                                    if ui.button("📤").on_hover_text("Export Collection (YAML)").clicked() {
+                                    if ui.button("📤").on_hover_text(tr("collections-exp-col-tip")).clicked() {
                                         export_collection = Some(collection.id.clone());
                                     }
-                                    if ui.button("➕").on_hover_text("Add Request").clicked() {
+                                    if ui.button("➕").on_hover_text(tr("collections-add-req-tip")).clicked() {
                                         add_request = Some(collection.id.clone());
                                     }
                                 });
@@ -101,7 +116,7 @@ impl UdpStudioState {
                                 if collection.requests.is_empty() {
                                     ui.horizontal(|ui| {
                                         ui.add_space(24.0);
-                                        ui.colored_label(egui::Color32::from_rgb(100, 110, 120), egui::RichText::new("Empty collection").italics().size(11.0));
+                                        ui.colored_label(egui::Color32::from_rgb(100, 110, 120), egui::RichText::new(tr("collections-empty-col")).italics().size(11.0));
                                     });
                                 } else {
                                     for req_idx in 0..collection.requests.len() {
@@ -139,7 +154,7 @@ impl UdpStudioState {
                                                     
                                                     // Clickable request label button
                                                     let label_text = if req.name.trim().is_empty() {
-                                                        "Unnamed Request".to_string()
+                                                        tr("collections-unnamed-req")
                                                     } else {
                                                         req.name.clone()
                                                     };
@@ -168,13 +183,13 @@ impl UdpStudioState {
                                                     
                                                     // Quick Actions on Right
                                                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                                        if ui.button("🗑").on_hover_text("Delete Request").clicked() {
+                                                        if ui.button("🗑").on_hover_text(tr("collections-del-req-tip")).clicked() {
                                                             delete_clicked = true;
                                                             delete_request = Some((collection.id.clone(), req.id.clone()));
                                                         }
                                                         let is_payload_valid = validate_payload(&req.payload, req.payload_type).is_ok();
                                                         let send_btn = ui.add_enabled(is_payload_valid, egui::Button::new("🚀"));
-                                                        let send_btn = send_btn.on_hover_text(if is_payload_valid { "Send Packets" } else { "Invalid payload format" });
+                                                        let send_btn = send_btn.on_hover_text(if is_payload_valid { tr("collections-send-tip") } else { tr("collections-invalid-payload-tip") });
                                                         if send_btn.clicked() {
                                                             send_clicked = true;
                                                             send_trigger = Some((req.target.clone(), req.payload_type, req.payload.clone()));
@@ -219,7 +234,7 @@ impl UdpStudioState {
             
             if let Some(mut req) = req_clone {
                 ui.separator();
-                ui.heading("📝 Edit Request");
+                ui.heading(tr("collections-edit-title"));
                 ui.add_space(4.0);
                 
                 egui::ScrollArea::vertical().id_salt("collection_editor_scroll").show(ui, |ui| {
@@ -227,19 +242,19 @@ impl UdpStudioState {
                         .num_columns(2)
                         .spacing([8.0, 8.0])
                         .show(ui, |ui| {
-                            ui.label("Name:");
+                            ui.label(tr("collections-edit-name"));
                             if ui.text_edit_singleline(&mut req.name).changed() {
                                 needs_save = true;
                             }
                             ui.end_row();
                             
-                            ui.label("Target:");
+                            ui.label(tr("collections-edit-target"));
                             if ui.text_edit_singleline(&mut req.target).changed() {
                                 needs_save = true;
                             }
                             ui.end_row();
                             
-                            ui.label("Format:");
+                            ui.label(tr("collections-edit-format"));
                             ui.horizontal(|ui| {
                                 let r1 = ui.radio_value(&mut req.payload_type, PayloadType::Text, "Text");
                                 let r2 = ui.radio_value(&mut req.payload_type, PayloadType::Hex, "Hex");
@@ -260,7 +275,7 @@ impl UdpStudioState {
                     }
                     
                     ui.add_space(6.0);
-                    ui.label("Payload:");
+                    ui.label(tr("collections-edit-payload"));
                     let response = ui.add(
                         egui::TextEdit::multiline(&mut req.payload)
                             .font(egui::TextStyle::Monospace)
@@ -271,25 +286,27 @@ impl UdpStudioState {
                     if response.changed() {
                         needs_save = true;
                     }
-
+  
                     let payload_validation = validate_payload(&req.payload, req.payload_type);
                     if let Err(ref err_msg) = payload_validation {
                         ui.add_space(4.0);
+                        let mut args = std::collections::HashMap::new();
+                        args.insert(std::borrow::Cow::Borrowed("msg"), err_msg.clone().into());
                         ui.colored_label(
                             egui::Color32::from_rgb(255, 100, 100),
-                            format!("⚠️ Invalid payload format: {}", err_msg)
+                            tr_args("collections-edit-invalid-payload", &args)
                         );
                     }
                     
                     ui.add_space(8.0);
                     ui.horizontal(|ui| {
-                        if ui.button("📂 Load to Composer").clicked() {
+                        if ui.button(tr("collections-edit-load")).clicked() {
                             load_to_composer = Some((req.target.clone(), req.payload_type, req.payload.clone()));
                         }
                         let is_payload_valid = payload_validation.is_ok();
                         let send_btn = ui.add_enabled(
                             is_payload_valid,
-                            egui::Button::new("🚀 Send")
+                            egui::Button::new(tr("collections-edit-send"))
                         );
                         if send_btn.clicked() {
                             send_trigger = Some((req.target.clone(), req.payload_type, req.payload.clone()));
@@ -316,9 +333,14 @@ impl UdpStudioState {
 
         // --- Apply deferred modifications (outside borrowing loops to satisfy borrow checker) ---
         if create_collection {
+            let col_name = {
+                let mut args = std::collections::HashMap::new();
+                args.insert(std::borrow::Cow::Borrowed("idx"), (self.collections.len() + 1).into());
+                tr_args("collections-created-name", &args)
+            };
             self.collections.push(Collection {
                 id: generate_id(),
-                name: format!("Collection {}", self.collections.len() + 1),
+                name: col_name,
                 requests: Vec::new(),
                 is_expanded: true,
             });
@@ -336,7 +358,7 @@ impl UdpStudioState {
             self.collections.retain(|c| c.id != col_id);
             needs_save = true;
         }
-
+ 
         if let Some(col_id) = export_collection {
             if let Some(col) = self.collections.iter().find(|c| c.id == col_id) {
                 let yaml_col = YamlCollection {
@@ -348,7 +370,7 @@ impl UdpStudioState {
                         payload: r.payload.clone(),
                     }).collect(),
                 };
-
+ 
                 match serde_yaml::to_string(&yaml_col) {
                     Ok(yaml_str) => {
                         if let Some(path) = rfd::FileDialog::new()
@@ -357,14 +379,20 @@ impl UdpStudioState {
                             .save_file()
                         {
                             if let Err(e) = std::fs::write(&path, yaml_str) {
-                                self.add_system_error(format!("Failed to export collection: {}", e));
+                                let mut args = std::collections::HashMap::new();
+                                args.insert(std::borrow::Cow::Borrowed("msg"), e.to_string().into());
+                                self.add_system_error(tr_args("collections-export-fail", &args));
                             } else {
-                                self.add_system_info(format!("Collection exported to {}", path.display()));
+                                let mut args = std::collections::HashMap::new();
+                                args.insert(std::borrow::Cow::Borrowed("path"), path.display().to_string().into());
+                                self.add_system_info(tr_args("collections-export-success", &args));
                             }
                         }
                     }
                     Err(e) => {
-                        self.add_system_error(format!("YAML Serialization Error: {}", e));
+                        let mut args = std::collections::HashMap::new();
+                        args.insert(std::borrow::Cow::Borrowed("msg"), e.to_string().into());
+                        self.add_system_error(tr_args("collections-export-fail", &args));
                     }
                 }
             }
@@ -373,9 +401,14 @@ impl UdpStudioState {
         if let Some(col_id) = add_request {
             if let Some(col) = self.collections.iter_mut().find(|c| c.id == col_id) {
                 let req_id = generate_id();
+                let req_name = {
+                    let mut args = std::collections::HashMap::new();
+                    args.insert(std::borrow::Cow::Borrowed("idx"), (col.requests.len() + 1).into());
+                    tr_args("collections-req-created-name", &args)
+                };
                 col.requests.push(PacketDefinition {
                     id: req_id.clone(),
-                    name: format!("Request {}", col.requests.len() + 1),
+                    name: req_name,
                     target: "127.0.0.1:9000".to_string(),
                     payload_type: PayloadType::Text,
                     payload: "New Request Payload".to_string(),
@@ -414,7 +447,7 @@ impl UdpStudioState {
         if let Some((target, p_type, p_data)) = send_trigger {
             self.send_packet(&target, p_type, &p_data);
         }
-
+ 
         if import_collection {
             if let Some(path) = rfd::FileDialog::new()
                 .add_filter("YAML File", &["yaml", "yml"])
@@ -422,8 +455,8 @@ impl UdpStudioState {
             {
                 match std::fs::read_to_string(&path) {
                     Ok(content) => {
-
-
+ 
+ 
                         match serde_yaml::from_str::<YamlCollection>(&content) {
                             Ok(parsed) => {
                                 let new_col = Collection {
@@ -440,15 +473,21 @@ impl UdpStudioState {
                                 };
                                 self.collections.push(new_col);
                                 self.save_config(); // Save config with new collection
-                                self.add_system_info(format!("Collection imported successfully from {}", path.display()));
+                                let mut args = std::collections::HashMap::new();
+                                args.insert(std::borrow::Cow::Borrowed("path"), path.display().to_string().into());
+                                self.add_system_info(tr_args("collections-import-success", &args));
                             }
                             Err(e) => {
-                                self.add_system_error(format!("Failed to parse YAML collection: {}", e));
+                                let mut args = std::collections::HashMap::new();
+                                args.insert(std::borrow::Cow::Borrowed("msg"), e.to_string().into());
+                                self.add_system_error(tr_args("collections-import-fail-parse", &args));
                             }
                         }
                     }
                     Err(e) => {
-                        self.add_system_error(format!("Failed to read file: {}", e));
+                        let mut args = std::collections::HashMap::new();
+                        args.insert(std::borrow::Cow::Borrowed("msg"), e.to_string().into());
+                        self.add_system_error(tr_args("collections-import-fail-read", &args));
                     }
                 }
             }

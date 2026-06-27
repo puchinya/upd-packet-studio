@@ -5,6 +5,21 @@ use crate::types::{LogDirection, LogEntry, LogExportFormat};
 
 impl UdpStudioState {
     pub fn show_log_viewer(&mut self, ui: &mut egui::Ui) {
+        crate::locales::init_translations();
+        let lang_id = self.language_id();
+        let tr = |key: &str| {
+            egui_i18n::set_language(&lang_id);
+            egui_i18n::tr!(key)
+        };
+        let tr_args = |key: &str, args: &std::collections::HashMap<std::borrow::Cow<'static, str>, egui_i18n::fluent_bundle::FluentValue<'_>>| {
+            egui_i18n::set_language(&lang_id);
+            let mut fluent_args = egui_i18n::fluent::FluentArgs::new();
+            for (k, v) in args {
+                fluent_args.set(k.as_ref(), v.clone());
+            }
+            egui_i18n::translate_fluent(key, &fluent_args)
+        };
+
         let mut new_selection = self.selected_log_idx;
         let mut scroll_to_row_idx = None;
 
@@ -63,7 +78,7 @@ impl UdpStudioState {
         ui.vertical(|ui| {
             // Header toolbar
             ui.horizontal(|ui| {
-                if ui.button("🗑 Clear").clicked() {
+                if ui.button(tr("log-btn-clear")).clicked() {
                     self.logs.clear();
                     self.filtered_indices.clear();
                     new_selection = None;
@@ -83,7 +98,7 @@ impl UdpStudioState {
                     });
 
                 let mut save_logs_trigger = false;
-                if ui.button("💾 Save Logs").on_hover_text("Export logs to selected format").clicked() {
+                if ui.button(tr("log-btn-save")).on_hover_text(tr("log-btn-save-tip")).clicked() {
                     save_logs_trigger = true;
                 }
 
@@ -143,19 +158,23 @@ impl UdpStudioState {
 
                         match result {
                             Ok(_) => {
-                                self.add_system_info(format!("Logs saved successfully to {}", path.display()));
+                                let mut args = std::collections::HashMap::new();
+                                args.insert(std::borrow::Cow::Borrowed("path"), path.display().to_string().into());
+                                self.add_system_info(tr_args("log-save-success", &args));
                             }
                             Err(e) => {
-                                self.add_system_error(format!("Failed to save logs: {}", e));
+                                let mut args = std::collections::HashMap::new();
+                                args.insert(std::borrow::Cow::Borrowed("msg"), e.to_string().into());
+                                self.add_system_error(tr_args("log-save-fail", &args));
                             }
                         }
                     }
                 }
                 
-                ui.checkbox(&mut self.auto_scroll, "Auto-scroll");
+                ui.checkbox(&mut self.auto_scroll, tr("log-checkbox-autoscroll"));
                 
                 ui.add_space(15.0);
-                ui.label("IP Filter:");
+                ui.label(tr("log-label-ip-filter"));
                 if ui.text_edit_singleline(&mut self.filter_text).changed() {
                     self.update_filtered_indices();
                 }
@@ -186,13 +205,13 @@ impl UdpStudioState {
 
             table
                 .header(24.0, |mut header| {
-                    header.col(|ui| { ui.strong("No."); });
-                    header.col(|ui| { ui.strong("Time"); });
-                    header.col(|ui| { ui.strong("Type"); });
-                    header.col(|ui| { ui.strong("IP"); });
-                    header.col(|ui| { ui.strong("Port"); });
-                    header.col(|ui| { ui.strong("Length"); });
-                    header.col(|ui| { ui.strong("Info (Preview)"); });
+                    header.col(|ui| { ui.strong(tr("log-hdr-no")); });
+                    header.col(|ui| { ui.strong(tr("log-hdr-time")); });
+                    header.col(|ui| { ui.strong(tr("log-hdr-type")); });
+                    header.col(|ui| { ui.strong(tr("log-hdr-ip")); });
+                    header.col(|ui| { ui.strong(tr("log-hdr-port")); });
+                    header.col(|ui| { ui.strong(tr("log-hdr-length")); });
+                    header.col(|ui| { ui.strong(tr("log-hdr-info")); });
                 })
                 .body(|body| {
                     body.rows(20.0, filtered_indices.len(), |mut row| {
