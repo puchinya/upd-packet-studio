@@ -66,8 +66,6 @@ impl UdpStudioState {
                     // Decode details
                     match self.inspector_protocol {
                         InspectorProtocol::Raw => {
-                            ui.label(tr("ins-title-hex-dump"));
-                            ui.add_space(4.0);
                             egui::ScrollArea::vertical()
                                 .id_salt("hex_dump_scroll")
                                 .show(ui, |ui| {
@@ -82,8 +80,6 @@ impl UdpStudioState {
                                 });
                         }
                         InspectorProtocol::TextAscii => {
-                            ui.label(tr("ins-title-ascii-view"));
-                            ui.add_space(4.0);
                             egui::ScrollArea::vertical()
                                 .id_salt("ascii_scroll")
                                 .show(ui, |ui| {
@@ -97,9 +93,6 @@ impl UdpStudioState {
                                 });
                         }
                         InspectorProtocol::EchonetLite => {
-                            ui.label(tr("ins-title-echonet-decode"));
-                            ui.add_space(6.0);
-                            
                             if entry.data.len() < 12 {
                                 ui.colored_label(
                                     egui::Color32::from_rgb(255, 100, 100),
