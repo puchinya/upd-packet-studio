@@ -118,5 +118,6 @@ pub fn setup_custom_styles(ctx: &egui::Context) {
     // Noto Sans JP 13pt → galley height ≈ 20px → button height ≈ 20+10 = 30px
     style.spacing.interact_size = egui::vec2(40.0, 30.0);
     style.spacing.window_margin = egui::Margin::same(12);
+    style.interaction.tooltip_delay = 0.2;
     ctx.set_global_style(style);
 }

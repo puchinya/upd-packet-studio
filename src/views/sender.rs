@@ -250,7 +250,8 @@ impl UdpStudioState {
                         ui.horizontal(|ui| {
                             let r1 = ui.radio_value(&mut self.composer_payload_type, PayloadType::Text, tr("composer-format-text"));
                             ui.add_space(10.0);
-                            let r2 = ui.radio_value(&mut self.composer_payload_type, PayloadType::Hex, tr("composer-format-hex"));
+                            let r2 = ui.radio_value(&mut self.composer_payload_type, PayloadType::Hex, tr("composer-format-hex"))
+                                .on_hover_text(tr("collections-edit-hex-tip"));
                             if r1.changed() || r2.changed() {
                                 self.save_config();
                             }

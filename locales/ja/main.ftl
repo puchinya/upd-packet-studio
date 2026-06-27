@@ -62,6 +62,7 @@ collections-edit-target-ip = 送信先アドレス:
 collections-edit-target-port = 送信先ポート:
 collections-edit-format = フォーマット:
 collections-edit-payload = ペイロード:
+collections-edit-hex-tip = 入力例: 10 81 00 01 または 10810001
 collections-edit-invalid-payload = ⚠ ペイロードの形式が正しくありません: { $msg }
 collections-edit-load = 📂 コンポーザーへ読み込み
 collections-edit-send = 🚀 送信

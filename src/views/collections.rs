@@ -318,7 +318,8 @@ impl UdpStudioState {
                               ui.horizontal(|ui| {
                                   let r1 = ui.radio_value(&mut req.payload_type, PayloadType::Text, "Text");
                                   ui.add_space(10.0);
-                                  let r2 = ui.radio_value(&mut req.payload_type, PayloadType::Hex, "Hex");
+                                  let r2 = ui.radio_value(&mut req.payload_type, PayloadType::Hex, "Hex")
+                                      .on_hover_text(tr("collections-edit-hex-tip"));
                                   if r1.changed() || r2.changed() {
                                       needs_save = true;
                                   }

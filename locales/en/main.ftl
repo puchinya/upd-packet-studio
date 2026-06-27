@@ -62,6 +62,7 @@ collections-edit-target-ip = Target IP:
 collections-edit-target-port = Target Port:
 collections-edit-format = Format:
 collections-edit-payload = Payload:
+collections-edit-hex-tip = Example: 10 81 00 01 or 10810001
 collections-edit-invalid-payload = ⚠ Invalid payload format: { $msg }
 collections-edit-load = 📂 Load to Composer
 collections-edit-send = 🚀 Send
