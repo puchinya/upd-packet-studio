@@ -425,7 +425,7 @@ fn test_collections_gui_interactions() {
     assert_eq!(state.composer_payload, "Collection Packets".to_string());
 
     // ----------------------------------------------------
-    // TEST 3: Create a New Collection (➕ New button)
+    // TEST 3: Create a New Collection (+ New button)
     // ----------------------------------------------------
     let mut raw_input7 = egui::RawInput::default();
     raw_input7.screen_rect = Some(egui::Rect::from_min_size(egui::pos2(0.0, 0.0), egui::vec2(1100.0, 700.0)));
@@ -435,10 +435,10 @@ fn test_collections_gui_interactions() {
         });
     });
 
-    let new_pos = find_text_center(&full_output.shapes, "➕ New")
-        .expect("Expected '➕ New' button to be rendered");
+    let new_pos = find_text_center(&full_output.shapes, "+ New")
+        .expect("Expected '+ New' button to be rendered");
 
-    // Click "➕ New"
+    // Click "+ New"
     let mut raw_input8 = egui::RawInput {
         screen_rect: Some(egui::Rect::from_min_size(egui::pos2(0.0, 0.0), egui::vec2(1100.0, 700.0))),
         ..Default::default()

@@ -14,13 +14,24 @@ pub fn setup_custom_styles(ctx: &egui::Context) {
         "noto_sans_jp".to_owned(),
         egui::FontData::from_static(noto_jp_data).into(),
     );
+    let mut symbols_font = egui::FontData::from_static(noto_symbols_data);
+    symbols_font.tweak = egui::FontTweak {
+        y_offset_factor: 0.08,
+        ..Default::default()
+    };
     fonts.font_data.insert(
         "noto_sans_symbols".to_owned(),
-        egui::FontData::from_static(noto_symbols_data).into(),
+        symbols_font.into(),
     );
+
+    let mut fa_font = egui::FontData::from_static(font_awesome_data);
+    fa_font.tweak = egui::FontTweak {
+        y_offset_factor: 0.08,
+        ..Default::default()
+    };
     fonts.font_data.insert(
         "font_awesome".to_owned(),
-        egui::FontData::from_static(font_awesome_data).into(),
+        fa_font.into(),
     );
 
     if let Some(family) = fonts.families.get_mut(&egui::FontFamily::Proportional) {

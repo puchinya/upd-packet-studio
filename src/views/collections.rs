@@ -105,7 +105,7 @@ impl UdpStudioState {
                                     if ui.button("📤").on_hover_text(tr("collections-exp-col-tip")).clicked() {
                                         export_collection = Some(collection.id.clone());
                                     }
-                                    if ui.button("➕").on_hover_text(tr("collections-add-req-tip")).clicked() {
+                                    if ui.button("+").on_hover_text(tr("collections-add-req-tip")).clicked() {
                                         add_request = Some(collection.id.clone());
                                     }
                                 });

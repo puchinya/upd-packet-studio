@@ -9,8 +9,8 @@ tabs-multicast = 🌐 Multicast
 titlebar-bind-addr = Bind Address:
 titlebar-btn-stop = ⏹ Stop
 titlebar-btn-bind = ▶ Bind
-titlebar-status-active = 🟢 Active
-titlebar-status-offline = 🔴 Offline
+titlebar-status-active = ● Active
+titlebar-status-offline = ● Offline
 titlebar-preferences = Preferences...
 titlebar-about = About...
 
@@ -36,7 +36,7 @@ settings-browse = 📁 Browse...
 settings-close = Close
 
 # Collections View
-collections-new = ➕ New
+collections-new = + New
 collections-new-tip = Create a new empty collection
 collections-import = 📥 Import
 collections-import-tip = Import a collection from a YAML file
@@ -55,7 +55,7 @@ collections-edit-name = Name:
 collections-edit-target = Target:
 collections-edit-format = Format:
 collections-edit-payload = Payload:
-collections-edit-invalid-payload = ⚠️ Invalid payload format: { $msg }
+collections-edit-invalid-payload = ⚠ Invalid payload format: { $msg }
 collections-edit-load = 📂 Load to Composer
 collections-edit-send = 🚀 Send
 
@@ -108,7 +108,7 @@ el-label-edt = Property Data (EDT, hex):
 el-edt-on = ON (30)
 el-edt-off = OFF (31)
 
-el-btn-generate = ⚙️ Generate and Insert ECHONET Lite Hex
+el-btn-generate = ⚙ Generate and Insert ECHONET Lite Hex
 el-err-prefix = ECHONET Lite builder error: { $msg }
 
 # Composer Tab
@@ -117,9 +117,9 @@ composer-payload-format = Payload Format:
 composer-format-text = Text (UTF-8)
 composer-format-hex = Hex (Spaces optional)
 composer-payload-content = Payload Content:
-composer-invalid-payload = ⚠️ Invalid payload format: { $msg }
+composer-invalid-payload = ⚠ Invalid payload format: { $msg }
 composer-btn-send = 🚀 Send
-composer-start-listener-tip = ⚠️ Start listener socket first.
+composer-start-listener-tip = ⚠ Start listener socket first.
 
 composer-save-title = 💾 Save Request to Collection
 composer-save-name = Name:
@@ -159,8 +159,8 @@ ins-proto-echonet = 💡 ECHONET Lite
 ins-title-hex-dump = Hex Dump View:
 ins-title-ascii-view = ASCII Text View (with control code visualizers):
 ins-title-echonet-decode = ECHONET Lite Protocol Decode:
-ins-el-err-too-short = ⚠️ Packet too short to be a valid ECHONET Lite frame (min 12 bytes).
-ins-el-warn-ehd1 = ⚠️ EHD1 is 0x{ $val } (Expected 0x10 for ECHONET Lite)
+ins-el-err-too-short = ⚠ Packet too short to be a valid ECHONET Lite frame (min 12 bytes).
+ins-el-warn-ehd1 = ⚠ EHD1 is 0x{ $val } (Expected 0x10 for ECHONET Lite)
 ins-el-label-ehd1 = EHD1 (Header 1):
 ins-el-label-ehd2 = EHD2 (Header 2):
 ins-el-format = Format { $fmt }
@@ -170,7 +170,7 @@ ins-el-label-deoj = Dest Object (DEOJ):
 ins-el-label-esv = Service Code (ESV):
 ins-el-label-opc = Property Count (OPC):
 ins-el-title-props = Parsed Properties:
-ins-el-err-malformed = ⚠️ Malformed ECHONET Lite properties: Packet truncated.
+ins-el-err-malformed = ⚠ Malformed ECHONET Lite properties: Packet truncated.
 ins-select-log-item = Select a log item in the logs panel to inspect its contents
 
 # ECHONET Lite Decoded objects/values
@@ -221,14 +221,14 @@ ins-el-edt-unknown = Unknown (0x{ $val })
 ins-el-edt-temp = { $temp } °C (0x{ $val })
 
 # Multicast Panel
-mc-status-offline = ⚠️ Listener Offline:
+mc-status-offline = ⚠ Listener Offline:
 mc-status-offline-tip = You must Bind to a local port in the title bar first before joining multicast groups.
 mc-join-title = 🌐 Join a Multicast Group
 mc-label-multicast-ip = Multicast IP:
 mc-label-interface-ip = Local Interface IP:
 mc-label-presets = Quick Presets:
 mc-preset-tip = Join { $ip }
-mc-btn-join = ➕ Join Multicast Group
+mc-btn-join = + Join Multicast Group
 mc-title-joined-list = 👥 Currently Joined Groups
 mc-no-memberships = No active multicast memberships on this socket.
 mc-hdr-multicast-addr = Multicast Address

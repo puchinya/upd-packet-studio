@@ -9,8 +9,8 @@ tabs-multicast = 🌐 マルチキャスト
 titlebar-bind-addr = バインド先アドレス:
 titlebar-btn-stop = ⏹ 停止
 titlebar-btn-bind = ▶ バインド
-titlebar-status-active = 🟢 有効
-titlebar-status-offline = 🔴 オフライン
+titlebar-status-active = ● 有効
+titlebar-status-offline = ● オフライン
 titlebar-preferences = 設定...
 titlebar-about = 本アプリについて...
 
@@ -36,7 +36,7 @@ settings-browse = 📁 選択...
 settings-close = 閉じる
 
 # Collections View
-collections-new = ➕ 新規作成
+collections-new = + 新規作成
 collections-new-tip = 空のコレクションを新規作成します
 collections-import = 📥 インポート
 collections-import-tip = YAMLファイルからコレクションをインポートします
@@ -55,7 +55,7 @@ collections-edit-name = 名前:
 collections-edit-target = 送信先:
 collections-edit-format = フォーマット:
 collections-edit-payload = ペイロード:
-collections-edit-invalid-payload = ⚠️ ペイロードの形式が正しくありません: { $msg }
+collections-edit-invalid-payload = ⚠ ペイロードの形式が正しくありません: { $msg }
 collections-edit-load = 📂 コンポーザーへ読み込み
 collections-edit-send = 🚀 送信
 
@@ -108,7 +108,7 @@ el-label-edt = プロパティデータ (EDT, 16進数):
 el-edt-on = ON (30)
 el-edt-off = OFF (31)
 
-el-btn-generate = ⚙️ ECHONET Lite 16進データを生成して挿入
+el-btn-generate = ⚙ ECHONET Lite 16進データを生成して挿入
 el-err-prefix = ECHONET Lite ビルダーエラー: { $msg }
 
 # Composer Tab
@@ -117,9 +117,9 @@ composer-payload-format = ペイロード形式:
 composer-format-text = テキスト (UTF-8)
 composer-format-hex = 16進数 (スペース可)
 composer-payload-content = ペイロード内容:
-composer-invalid-payload = ⚠️ ペイロードの形式が正しくありません: { $msg }
+composer-invalid-payload = ⚠ ペイロードの形式が正しくありません: { $msg }
 composer-btn-send = 🚀 送信
-composer-start-listener-tip = ⚠️ 最初にリスナーソケットを開始してください。
+composer-start-listener-tip = ⚠ 最初にリスナーソケットを開始してください。
 
 composer-save-title = 💾 リクエストをコレクションに保存
 composer-save-name = 名前:
@@ -159,8 +159,8 @@ ins-proto-echonet = 💡 ECHONET Lite
 ins-title-hex-dump = 16進数ダンプ表示:
 ins-title-ascii-view = ASCIIテキスト表示（制御コード可視化付き）:
 ins-title-echonet-decode = ECHONET Lite プロトコル解析:
-ins-el-err-too-short = ⚠️ パケット長が短すぎるため、有効な ECHONET Lite フレームではありません (最小 12 バイト)。
-ins-el-warn-ehd1 = ⚠️ EHD1 が 0x{ $val } です (ECHONET Lite では 0x10 を想定)
+ins-el-err-too-short = ⚠ パケット長が短すぎるため、有効な ECHONET Lite フレームではありません (最小 12 バイト)。
+ins-el-warn-ehd1 = ⚠ EHD1 が 0x{ $val } です (ECHONET Lite では 0x10 を想定)
 ins-el-label-ehd1 = EHD1 (ヘッダー1):
 ins-el-label-ehd2 = EHD2 (ヘッダー2):
 ins-el-format = フォーマット { $fmt }
@@ -170,7 +170,7 @@ ins-el-label-deoj = 送信先オブジェクト (DEOJ):
 ins-el-label-esv = サービスコード (ESV):
 ins-el-label-opc = プロパティ数 (OPC):
 ins-el-title-props = 解析されたプロパティ:
-ins-el-err-malformed = ⚠️ 不正な ECHONET Lite プロパティ: パケットが途切れています。
+ins-el-err-malformed = ⚠ 不正な ECHONET Lite プロパティ: パケットが途切れています。
 ins-select-log-item = ログパネルからログアイテムを選択して詳細を解析します
 
 # ECHONET Lite Decoded objects/values
@@ -221,14 +221,14 @@ ins-el-edt-unknown = 不明 (0x{ $val })
 ins-el-edt-temp = { $temp } °C (0x{ $val })
 
 # Multicast Panel
-mc-status-offline = ⚠️ リスナーオフライン:
+mc-status-offline = ⚠ リスナーオフライン:
 mc-status-offline-tip = マルチキャストグループに参加する前に、タイトルバーでローカルポートにバインドする必要があります。
 mc-join-title = 🌐 マルチキャストグループへの参加
 mc-label-multicast-ip = マルチキャストIP:
 mc-label-interface-ip = インターフェースIP:
 mc-label-presets = クイックプリセット:
 mc-preset-tip = { $ip } に参加
-mc-btn-join = ➕ マルチキャストグループに参加
+mc-btn-join = + マルチキャストグループに参加
 mc-title-joined-list = 👥 現在参加中のグループ
 mc-no-memberships = このソケットにアクティブなマルチキャストメンバーシップはありません。
 mc-hdr-multicast-addr = マルチキャストアドレス

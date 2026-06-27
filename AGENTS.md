@@ -112,7 +112,17 @@ To create premium desktop designs, avoid using browser-default aesthetics. Custo
 - **Context Styles**: Access styling via `ctx.global_style()` (not `ctx.style()`) and write styles back using `ctx.set_global_style(style)`.
 - **Spacing**: Use integer dimensions for margins where required: `egui::Margin::same(12)` instead of float literals.
 
+### 4.3 Monochrome/Text-Style Emojis (色なし絵文字の使用ルール)
+To maintain visual consistency and support various OS/font configurations (especially when rendering with monochrome fonts like `Noto Sans Symbols 2`):
+- **Do NOT use color emojis (default presentation) directly in the UI text.**
+- **Use Monochrome/Text-style emojis instead.**
+  - **CRITICAL**: Do **NOT** append the Variation Selector 15 (VS15, `\u{FE0E}`) or VS16 (`\u{FE0F}`) directly to emojis in Rust code or Fluent files. The `egui` text renderer does not automatically hide or zero-width render variation selectors, which causes a "tofu" block (□) to be rendered next to the emoji.
+  - Rely on font fallback priority (`Noto Sans Symbols 2` and `FontAwesome`) configured in `styling.rs` to render emojis in monochrome automatically.
+- **For emojis without monochrome glyphs:**
+  - Replace them with clean monochrome text symbols (e.g., replace `🟢` and `🔴` with `●`, and replace `➕` with `+`).
+
 ---
+
 
 ## 📂 5. File Splitting & Code Organization
 

@@ -782,7 +782,7 @@ impl eframe::App for MainApp {
                             
                             if let Some(ref err) = self.state.listener_error {
                                 ui.add_space(10.0);
-                                ui.colored_label(egui::Color32::from_rgb(255, 90, 90), format!("⚠️ {}", err));
+                                ui.colored_label(egui::Color32::from_rgb(255, 90, 90), format!("⚠ {}", err));
                             }
                             
                             // Align settings button to the right end of title bar
