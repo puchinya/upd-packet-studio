@@ -54,17 +54,33 @@ impl UdpStudioState {
                                 ui.label(tr("mc-label-multicast-ip"));
                                 ui.add(
                                     egui::TextEdit::singleline(&mut self.multicast_input_addr)
-                                        .desired_width(180.0)
+                                        .desired_width(120.0)
                                         .hint_text("e.g. 224.0.23.0")
                                 );
                                 ui.end_row();
 
                                 ui.label(tr("mc-label-interface-ip"));
-                                ui.add(
-                                    egui::TextEdit::singleline(&mut self.multicast_input_interface)
-                                        .desired_width(180.0)
-                                        .hint_text("e.g. 0.0.0.0")
-                                );
+                                
+                                let mut ifaces = vec!["0.0.0.0".to_string(), "127.0.0.1".to_string()];
+                                if let Ok(addrs) = get_if_addrs::get_if_addrs() {
+                                    for iface in addrs {
+                                        if iface.ip().is_ipv4() {
+                                            let ip_str = iface.ip().to_string();
+                                            if !ifaces.contains(&ip_str) {
+                                                ifaces.push(ip_str);
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                egui::ComboBox::from_id_salt("multicast_interface_combo")
+                                    .selected_text(&self.multicast_input_interface)
+                                    .width(120.0)
+                                    .show_ui(ui, |ui| {
+                                        for ip in ifaces {
+                                            ui.selectable_value(&mut self.multicast_input_interface, ip.clone(), ip.clone());
+                                        }
+                                    });
                                 ui.end_row();
                             });
 
@@ -144,7 +160,7 @@ impl UdpStudioState {
 
                         let join_btn = ui.add_enabled(
                             self.is_listening,
-                            egui::Button::new(tr("mc-btn-join")).min_size(egui::vec2(150.0, 26.0))
+                            egui::Button::new(tr("mc-btn-join")).min_size(egui::vec2(120.0, 26.0))
                         );
                         if join_btn.clicked() {
                             join_trigger = Some((
@@ -163,41 +179,34 @@ impl UdpStudioState {
             ui.strong(tr("mc-title-joined-list"));
             ui.add_space(6.0);
 
-            egui::ScrollArea::vertical()
-                .id_salt("multicast_list_scroll")
-                .auto_shrink([false, true])
-                .show(ui, |ui| {
-                    ui.set_width(ui.available_width());
-                    if self.multicast_groups.is_empty() {
-                        ui.add(egui::Label::new(
-                            egui::RichText::new(tr("mc-no-memberships"))
-                                .color(egui::Color32::from_rgb(120, 130, 140))
-                                .italics()
-                        ).wrap());
-                    } else {
-                        egui::Grid::new("multicast_joined_grid")
-                            .num_columns(3)
-                            .spacing([15.0, 8.0])
-                            .min_col_width(80.0)
-                            .show(ui, |ui| {
-                                // Table Header
-                                ui.colored_label(egui::Color32::from_rgb(180, 190, 200), egui::RichText::new(tr("mc-hdr-multicast-addr")).strong());
-                                ui.colored_label(egui::Color32::from_rgb(180, 190, 200), egui::RichText::new(tr("mc-hdr-interface-addr")).strong());
-                                ui.colored_label(egui::Color32::from_rgb(180, 190, 200), egui::RichText::new(tr("mc-hdr-action")).strong());
-                                ui.end_row();
+            if self.multicast_groups.is_empty() {
+                ui.add(egui::Label::new(
+                    egui::RichText::new(tr("mc-no-memberships"))
+                        .color(egui::Color32::from_rgb(120, 130, 140))
+                        .italics()
+                ).wrap());
+            } else {
+                egui::Grid::new("multicast_joined_grid")
+                    .num_columns(3)
+                    .spacing([15.0, 8.0])
+                    .show(ui, |ui| {
+                        // Table Header
+                        ui.colored_label(egui::Color32::from_rgb(180, 190, 200), egui::RichText::new(tr("mc-hdr-multicast-addr")).strong());
+                        ui.colored_label(egui::Color32::from_rgb(180, 190, 200), egui::RichText::new(tr("mc-hdr-interface-addr")).strong());
+                        ui.label("");
+                        ui.end_row();
 
-                                for group in &self.multicast_groups {
-                                    ui.add(egui::Label::new(&group.multi_addr).wrap());
-                                    ui.add(egui::Label::new(&group.interface_addr).wrap());
-                                    
-                                    if ui.button(tr("mc-btn-leave")).clicked() {
-                                        leave_trigger = Some((group.multi_addr.clone(), group.interface_addr.clone()));
-                                    }
-                                    ui.end_row();
-                                }
-                            });
-                    }
-                });
+                        for group in &self.multicast_groups {
+                            ui.label(&group.multi_addr);
+                            ui.label(&group.interface_addr);
+                            
+                            if ui.button("🗑").on_hover_text(tr("mc-btn-leave")).clicked() {
+                                leave_trigger = Some((group.multi_addr.clone(), group.interface_addr.clone()));
+                            }
+                            ui.end_row();
+                        }
+                    });
+            }
         });
 
         // Apply mutations outside borrow scopes

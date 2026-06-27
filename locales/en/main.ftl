@@ -239,10 +239,9 @@ mc-preset-tip = Join { $ip }
 mc-btn-join = + Join Multicast Group
 mc-title-joined-list = 👥 Currently Joined Groups
 mc-no-memberships = No active multicast memberships on this socket.
-mc-hdr-multicast-addr = Multicast Address
-mc-hdr-interface-addr = Interface Address
-mc-hdr-action = Action
-mc-btn-leave = 🗑 Leave
+mc-hdr-multicast-addr = Group
+mc-hdr-interface-addr = Interface
+mc-btn-leave = Leave
 mc-err-empty-fields = Multicast address and Interface address cannot be empty.
 
 

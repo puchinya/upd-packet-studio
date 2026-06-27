@@ -239,10 +239,9 @@ mc-preset-tip = { $ip } に参加
 mc-btn-join = + マルチキャストグループに参加
 mc-title-joined-list = 👥 現在参加中のグループ
 mc-no-memberships = このソケットにアクティブなマルチキャストメンバーシップはありません。
-mc-hdr-multicast-addr = マルチキャストアドレス
-mc-hdr-interface-addr = インターフェースアドレス
-mc-hdr-action = アクション
-mc-btn-leave = 🗑 離脱
+mc-hdr-multicast-addr = グループ
+mc-hdr-interface-addr = インターフェース
+mc-btn-leave = 離脱
 mc-err-empty-fields = マルチキャストアドレスとインターフェースアドレスは空にできません。
 
 
