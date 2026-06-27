@@ -2,38 +2,29 @@ use eframe::egui;
 
 // Styling system
 pub fn setup_custom_styles(ctx: &egui::Context) {
-    // Set up custom fonts for Japanese support
+    // Set up custom fonts for Japanese and Emoji/Icon support
     let mut fonts = egui::FontDefinitions::default();
-    let font_paths = [
-        "/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc",
-        "/System/Library/Fonts/PingFang.ttc",
-        "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
-        "/Library/Fonts/Arial Unicode.ttf",
-        "C:\\Windows\\Fonts\\msyh.ttc",
-        "C:\\Windows\\Fonts\\msjh.ttc",
-        "C:\\Windows\\Fonts\\msgothic.ttc",
-    ];
 
-    let mut font_data = None;
-    for path in &font_paths {
-        if let Ok(data) = std::fs::read(path) {
-            font_data = Some(data);
-            break;
-        }
+    // Include font binaries statically from assets
+    let noto_jp_data = include_bytes!("../assets/fonts/NotoSansJP-Regular.otf");
+    let font_awesome_data = include_bytes!("../assets/fonts/fa-solid-900.ttf");
+
+    fonts.font_data.insert(
+        "noto_sans_jp".to_owned(),
+        egui::FontData::from_static(noto_jp_data).into(),
+    );
+    fonts.font_data.insert(
+        "font_awesome".to_owned(),
+        egui::FontData::from_static(font_awesome_data).into(),
+    );
+
+    if let Some(family) = fonts.families.get_mut(&egui::FontFamily::Proportional) {
+        family.insert(0, "noto_sans_jp".to_owned());
+        family.insert(1, "font_awesome".to_owned());
     }
-
-    if let Some(data) = font_data {
-        fonts.font_data.insert(
-            "japanese".to_owned(),
-            egui::FontData::from_owned(data).into(),
-        );
-
-        if let Some(family) = fonts.families.get_mut(&egui::FontFamily::Proportional) {
-            family.push("japanese".to_owned());
-        }
-        if let Some(family) = fonts.families.get_mut(&egui::FontFamily::Monospace) {
-            family.push("japanese".to_owned());
-        }
+    if let Some(family) = fonts.families.get_mut(&egui::FontFamily::Monospace) {
+        family.insert(0, "noto_sans_jp".to_owned());
+        family.insert(1, "font_awesome".to_owned());
     }
     ctx.set_fonts(fonts);
 

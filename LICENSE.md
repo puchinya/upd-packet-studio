@@ -59,3 +59,11 @@ The License shall be deemed effective as of the date CC0 was applied by Affirmer
 2. Affirmer offers the Work as-is and makes no representations or warranties of any kind concerning the Work, express, implied, statutory or otherwise, including without limitation warranties of title, merchantability, fitness for a particular purpose, non infringement, or the absence of latent or other defects, accuracy, or the present or absence of errors, whether or not discoverable, all to the greatest extent permissible under applicable law.
 3. Affirmer disclaims responsibility for clearing rights of other persons that may apply to the Work or any use thereof, including without limitation any person's Copyright and Related Rights in the Work. Further, Affirmer disclaims responsibility for obtaining any necessary consents, permissions or other rights required for any use of the Work.
 4. Affirmer understands and acknowledges that Creative Commons is not a party to this document and has no duty or obligation with respect to this CC0 or use of the Work.
+
+---
+
+## Third-Party Components
+
+This project includes third-party assets (such as fonts in the `assets/` directory) which are licensed under their own respective open-source licenses. 
+Please refer to [docs/third_party_licenses.md](file:///Users/nabeshimamasataka/RustroverProjects/udp-packet-studio/docs/third_party_licenses.md) for full details, copyright notices, and license texts of these components.
+

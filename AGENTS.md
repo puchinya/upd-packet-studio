@@ -159,4 +159,16 @@ To align with Rust's best practices and keep the main codebase modular and clean
   - レイアウトやコンポーネント（特に `src/views/` 内の各タブ画面やコントロールの配置）を変更した際は、**必ず** `cargo test` を実行し、GUI操作のエミュレーションテスト（リサイズ操作や、送信ボタンのクリックイベントテストなど）が壊れていないか確認してください。
   - GUI変更によってボタンの位置やID、あるいは座標データ等の更新が必要になった場合は、追従して `tests/gui_tests.rs` 側のテストコードも適切にアップデートする必要があります。
 
+---
+
+## 📄 7. サードパーティライセンスの管理 (Third-Party License Management)
+
+ライブラリ依存関係（Cargo）以外の外部オープンソース資産（フォント、画像、音声、アイコンなど）を追加する際は、将来的にライセンス情報が不明瞭になるのを防ぐため、以下の手順を必ず厳守してください。
+
+- **ライセンス管理ドキュメントの作成・更新**:
+  - 新たなアセットを追加する際は、必ず [docs/third_party_licenses.md](file:///Users/nabeshimamasataka/RustroverProjects/udp-packet-studio/docs/third_party_licenses.md)（または該当するライセンス管理用ドキュメント）に、対象ファイルのパス、入手元URL、著作権表記、および適用ライセンス（例: SIL OFL 1.1）を追記してください。必要に応じて、ライセンスの全文もドキュメント内に掲載してください。
+- **メインライセンスの更新**:
+  - プロジェクト全体のライセンスファイル（[LICENSE.md](file:///Users/nabeshimamasataka/RustroverProjects/udp-packet-studio/LICENSE.md) 等）に「Third-Party Components（サードパーティ・コンポーネント）」セクションを追加または更新し、サードパーティライセンスドキュメントへのリンクと参照説明を追記してください。
+
+
 
