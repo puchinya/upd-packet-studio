@@ -96,24 +96,7 @@ if [ -z "$INSTALLER_IDENTITY" ]; then
   INSTALLER_IDENTITY=$(security find-identity -v | grep "3rd Party Mac Developer Installer\|Mac Installer Distribution" | head -n 1 | awk -F '"' '{print $2}')
 fi
 
-# 1. Sign the app bundle
-if [ -n "$CODESIGN_IDENTITY" ]; then
-  echo "Signing app binary and bundle with identity: ${CODESIGN_IDENTITY}"
-  
-  # Sign the executable inside the bundle (must use Sandboxed entitlements)
-  codesign --force --options runtime --entitlements scripts/entitlements.appstore.plist --sign "${CODESIGN_IDENTITY}" --timestamp "${MACOS_DIR}/${APP_NAME}"
-  
-  # Sign the bundle itself
-  codesign --force --options runtime --entitlements scripts/entitlements.appstore.plist --sign "${CODESIGN_IDENTITY}" --timestamp "${APP_BUNDLE}"
-  
-  echo "Verification of App Bundle signature:"
-  codesign --verify --verbose --deep "${APP_BUNDLE}"
-else
-  echo "Warning: No Apple Distribution codesign identity found. Skipping App Bundle codesigning."
-  echo "You will not be able to submit to the App Store without codesigning."
-fi
-
-# 1b. Embed provisioning profile
+# 1. Embed provisioning profile
 if [ -z "$PROVISIONING_PROFILE" ]; then
   # Search for any .provisionprofile file in current directory or scripts/
   PROVISIONING_PROFILE=$(find . -maxdepth 2 -name "*.provisionprofile" | head -n 1)
@@ -125,6 +108,23 @@ if [ -n "$PROVISIONING_PROFILE" ]; then
 else
   echo "Warning: No provisioning profile found. Set PROVISIONING_PROFILE env var or place a .provisionprofile file here."
   echo "You will not be able to submit to TestFlight or the App Store without it."
+fi
+
+# 2. Sign the app bundle (after all assets and profiles are inside)
+if [ -n "$CODESIGN_IDENTITY" ]; then
+  echo "Signing app binary and bundle with identity: ${CODESIGN_IDENTITY}"
+  
+  # Sign the executable inside the bundle (must use Sandboxed entitlements, no hardened runtime option is needed for App Store)
+  codesign --force --entitlements scripts/entitlements.appstore.plist --sign "${CODESIGN_IDENTITY}" --timestamp "${MACOS_DIR}/${APP_NAME}"
+  
+  # Sign the bundle itself
+  codesign --force --entitlements scripts/entitlements.appstore.plist --sign "${CODESIGN_IDENTITY}" --timestamp "${APP_BUNDLE}"
+  
+  echo "Verification of App Bundle signature:"
+  codesign --verify --verbose --deep "${APP_BUNDLE}"
+else
+  echo "Warning: No Apple Distribution codesign identity found. Skipping App Bundle codesigning."
+  echo "You will not be able to submit to the App Store without codesigning."
 fi
 
 # 2. Build the Installer Package (.pkg)
