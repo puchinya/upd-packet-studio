@@ -11,10 +11,12 @@ fn default_auto_save_enabled() -> bool {
 }
 
 fn default_auto_save_dir() -> String {
-    if let Some(home) = dirs::home_dir() {
-        home.join("UdpPacketStudio").join("Logs").to_string_lossy().into_owned()
+    if let Some(config) = dirs::config_dir() {
+        config.join("udp-packet-studio").join("logs").to_string_lossy().into_owned()
+    } else if let Some(home) = dirs::home_dir() {
+        home.join("UdpPacketStudio").join("logs").to_string_lossy().into_owned()
     } else {
-        "./Logs".to_string()
+        "./logs".to_string()
     }
 }
 
@@ -75,7 +77,22 @@ impl SavedConfig {
             }
         }
 
-        if let Some(config) = loaded_config {
+        if let Some(mut config) = loaded_config {
+            let ifaces = crate::get_local_interfaces();
+            let mut found = false;
+            if config.listener_ip == "0.0.0.0" || config.listener_ip == "127.0.0.1" {
+                found = true;
+            } else {
+                for (_, ip) in &ifaces {
+                    if ip == &config.listener_ip {
+                        found = true;
+                        break;
+                    }
+                }
+            }
+            if !found {
+                config.listener_ip = "0.0.0.0".to_string();
+            }
             return config;
         }
         
@@ -138,6 +155,9 @@ impl SavedConfig {
     }
 
     pub fn save(&self) {
+        if cfg!(test) {
+            return;
+        }
         if let Ok(content) = serde_json::to_string_pretty(self) {
             let mut saved = false;
             if let Some(path) = config_path() {

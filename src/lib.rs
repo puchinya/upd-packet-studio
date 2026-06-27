@@ -20,6 +20,20 @@ use config::SavedConfig;
 use styling::setup_custom_styles;
 use locales::LanguageSetting;
 
+pub fn get_local_interfaces() -> Vec<(String, String)> {
+    let mut list = Vec::new();
+    if let Ok(interfaces) = get_if_addrs::get_if_addrs() {
+        for iface in interfaces {
+            if !iface.is_loopback() {
+                if let get_if_addrs::IfAddr::V4(v4_addr) = iface.addr {
+                    list.push((iface.name, v4_addr.ip.to_string()));
+                }
+            }
+        }
+    }
+    list
+}
+
 pub struct UdpStudioState {
     pub collections: Vec<Collection>,
     pub selected_request_id: Option<String>,
@@ -79,6 +93,7 @@ pub struct UdpStudioState {
     pub auto_save_dir: String,
     pub auto_save_format: LogExportFormat,
     pub settings_open: bool,
+    pub settings_reset_confirm_open: bool,
     pub about_open: bool,
     pub about_tab: AboutTab,
     pub tx_logger: Sender<LoggerCommand>,
@@ -86,13 +101,32 @@ pub struct UdpStudioState {
 }
 
 impl UdpStudioState {
-    pub fn add_to_listener_history(&mut self, ip: String, port: String) {
-        let ip = ip.trim().to_string();
-        if !ip.is_empty() {
-            self.listener_ip_history.retain(|x| x != &ip);
-            self.listener_ip_history.insert(0, ip);
-            self.listener_ip_history.truncate(20);
-        }
+    pub fn reset_settings(&mut self) {
+        self.listener_ip = "0.0.0.0".to_string();
+        self.listener_port = "9000".to_string();
+        self.composer_ip = "127.0.0.1".to_string();
+        self.composer_port = "9000".to_string();
+        self.listener_ip_history.clear();
+        self.listener_port_history.clear();
+        self.composer_ip_history.clear();
+        self.composer_port_history.clear();
+        self.composer_payload_type = PayloadType::Text;
+        self.composer_payload = "Hello from Composer!".to_string();
+        self.auto_save_enabled = false;
+        self.auto_save_dir = if let Some(config) = dirs::config_dir() {
+            config.join("udp-packet-studio").join("logs").to_string_lossy().into_owned()
+        } else if let Some(home) = dirs::home_dir() {
+            home.join("UdpPacketStudio").join("logs").to_string_lossy().into_owned()
+        } else {
+            "./logs".to_string()
+        };
+        self.auto_save_format = LogExportFormat::Csv;
+        self.language_setting = LanguageSetting::System;
+        self.save_config();
+        self.update_logger_config();
+    }
+
+    pub fn add_to_listener_history(&mut self, port: String) {
         let port = port.trim().to_string();
         if !port.is_empty() {
             self.listener_port_history.retain(|x| x != &port);
@@ -532,6 +566,7 @@ impl MainApp {
             auto_save_dir: config.auto_save_dir,
             auto_save_format: config.auto_save_format,
             settings_open: false,
+            settings_reset_confirm_open: false,
             about_open: false,
             about_tab: AboutTab::Info,
             tx_logger,
@@ -830,26 +865,27 @@ impl eframe::App for MainApp {
                             ui.label(self.state.tr("titlebar-bind-addr"));
                             
                             let mut ip_chosen = None;
-                            ui.horizontal(|ui| {
-                                ui.spacing_mut().item_spacing = egui::vec2(2.0, 0.0);
-                                let edit_res = ui.add(egui::TextEdit::singleline(&mut self.state.listener_ip).desired_width(100.0));
-                                if edit_res.changed() {
-                                    self.state.save_config();
-                                }
-                                ui.menu_button("▾", |ui| {
-                                    ui.set_min_width(120.0);
-                                    if self.state.listener_ip_history.is_empty() {
-                                        ui.weak("No history");
-                                    } else {
-                                        for h in &self.state.listener_ip_history {
-                                            if ui.button(h).clicked() {
-                                                ip_chosen = Some(h.clone());
-                                                ui.close();
+                            let current_ip = self.state.listener_ip.clone();
+                            egui::ComboBox::from_id_salt("bind_ip_combo")
+                                .selected_text(&current_ip)
+                                .width(120.0)
+                                .show_ui(ui, |ui| {
+                                    if ui.selectable_label(current_ip == "0.0.0.0", "0.0.0.0 (All interfaces)").clicked() {
+                                        ip_chosen = Some("0.0.0.0".to_string());
+                                    }
+                                    if ui.selectable_label(current_ip == "127.0.0.1", "127.0.0.1 (Loopback)").clicked() {
+                                        ip_chosen = Some("127.0.0.1".to_string());
+                                    }
+                                    let ifaces = crate::get_local_interfaces();
+                                    if !ifaces.is_empty() {
+                                        ui.separator();
+                                        for (name, ip) in &ifaces {
+                                            if ui.selectable_label(current_ip == *ip, format!("{} ({})", ip, name)).clicked() {
+                                                ip_chosen = Some(ip.clone());
                                             }
                                         }
                                     }
                                 });
-                            });
                             if let Some(ip) = ip_chosen {
                                 self.state.listener_ip = ip;
                                 self.state.save_config();
@@ -904,7 +940,7 @@ impl eframe::App for MainApp {
                                      self.state.listener_error = None;
                                      let ip = self.state.listener_ip.trim().to_string();
                                      let port = self.state.listener_port.trim().to_string();
-                                     self.state.add_to_listener_history(ip.clone(), port.clone());
+                                     self.state.add_to_listener_history(port.clone());
                                      let bind_addr = format!("{}:{}", ip, port);
                                      self.state.udp_worker.send(UdpCommand::Bind(bind_addr));
                                  }
@@ -1097,6 +1133,7 @@ impl eframe::App for MainApp {
         if self.state.settings_open {
             let mut open = self.state.settings_open;
             let mut close_clicked = false;
+            let mut reset_clicked = false;
             
             // Retrieve all translations upfront to satisfy borrow checker
             let settings_title = self.state.tr("settings-title");
@@ -1113,6 +1150,7 @@ impl eframe::App for MainApp {
             let auto_save_dir_label = self.state.tr("settings-auto-save-dir");
             let browse_btn_label = self.state.tr("settings-browse");
             let close_btn_label = self.state.tr("settings-close");
+            let reset_btn_label = self.state.tr("settings-reset");
 
             egui::Window::new(settings_title)
                 .open(&mut open)
@@ -1207,10 +1245,70 @@ impl eframe::App for MainApp {
                             if ui.button(close_btn_label).clicked() {
                                 close_clicked = true;
                             }
+                            
+                            let reset_btn = ui.add(egui::Button::new(egui::RichText::new(reset_btn_label).color(egui::Color32::from_rgb(255, 100, 100))));
+                            if reset_btn.clicked() {
+                                reset_clicked = true;
+                            }
                         });
                     });
                 });
+            if reset_clicked {
+                self.state.settings_reset_confirm_open = true;
+            }
             self.state.settings_open = open && !close_clicked;
+        }
+
+        // Draw the settings reset confirmation dialog if open
+        if self.state.settings_reset_confirm_open {
+            let mut open = self.state.settings_reset_confirm_open;
+            let mut ok_clicked = false;
+            let mut cancel_clicked = false;
+
+            let title = self.state.tr("settings-reset-confirm-title");
+            let msg = self.state.tr("settings-reset-confirm-msg");
+            let ok_label = self.state.tr("settings-ok");
+            let cancel_label = self.state.tr("settings-cancel");
+
+            egui::Window::new(title)
+                .open(&mut open)
+                .resizable(false)
+                .collapsible(false)
+                .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
+                .show(&ctx, |ui| {
+                    ui.vertical(|ui| {
+                        ui.label(msg);
+                        ui.add_space(12.0);
+                        ui.horizontal(|ui| {
+                            if ui.button(ok_label).clicked() {
+                                ok_clicked = true;
+                            }
+                            if ui.button(cancel_label).clicked() {
+                                cancel_clicked = true;
+                            }
+                        });
+                    });
+                });
+
+            if ok_clicked {
+                self.state.reset_settings();
+                self.state.settings_reset_confirm_open = false;
+                self.state.settings_open = false;
+                
+                if let Ok(exe_path) = std::env::current_exe() {
+                    let mut cmd = std::process::Command::new(exe_path);
+                    let args: Vec<String> = std::env::args().collect();
+                    if args.len() > 1 {
+                        cmd.args(&args[1..]);
+                    }
+                    let _ = cmd.spawn();
+                }
+                std::process::exit(0);
+            }
+
+            if cancel_clicked || !open {
+                self.state.settings_reset_confirm_open = false;
+            }
         }
 
         // Draw the About dialog if open

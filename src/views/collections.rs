@@ -254,7 +254,7 @@ impl UdpStudioState {
                                 needs_save = true;
                             }
                             ui.end_row();
-                                      ui.label(tr("collections-edit-target"));
+                            ui.label(tr("collections-edit-target-ip"));
                             ui.horizontal(|ui| {
                                 let mut ip_chosen = None;
                                 ui.spacing_mut().item_spacing = egui::vec2(2.0, 0.0);
@@ -279,10 +279,13 @@ impl UdpStudioState {
                                     req.target_ip = ip;
                                     needs_save = true;
                                 }
-                                
-                                ui.label(":");
-                                
+                            });
+                            ui.end_row();
+
+                            ui.label(tr("collections-edit-target-port"));
+                            ui.horizontal(|ui| {
                                 let mut port_chosen = None;
+                                ui.spacing_mut().item_spacing = egui::vec2(2.0, 0.0);
                                 let edit_port = ui.add(egui::TextEdit::singleline(&mut req.target_port).desired_width(60.0));
                                 if edit_port.changed() {
                                     needs_save = true;

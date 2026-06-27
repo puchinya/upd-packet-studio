@@ -34,6 +34,11 @@ settings-auto-save-format = Log Format:
 settings-auto-save-dir = Save Directory:
 settings-browse = 📁 Browse...
 settings-close = Close
+settings-reset = Reset Settings
+settings-reset-confirm-title = Confirm Reset
+settings-reset-confirm-msg = Are you sure you want to reset all settings? The application will restart automatically.
+settings-ok = OK
+settings-cancel = Cancel
 
 # Collections View
 collections-new = + New
@@ -53,6 +58,8 @@ collections-invalid-payload-tip = Invalid payload format
 collections-edit-title = 📝 Edit Request
 collections-edit-name = Name:
 collections-edit-target = Target:
+collections-edit-target-ip = Target IP:
+collections-edit-target-port = Target Port:
 collections-edit-format = Format:
 collections-edit-payload = Payload:
 collections-edit-invalid-payload = ⚠ Invalid payload format: { $msg }
