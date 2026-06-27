@@ -78,17 +78,20 @@ pub struct UdpStudioState {
 
 impl UdpStudioState {
     pub(crate) fn save_config(&self) {
-        let config = SavedConfig {
-            collections: self.collections.clone(),
-            listener_addr: self.listener_addr.clone(),
-            composer_target: self.composer_target.clone(),
-            composer_payload_type: self.composer_payload_type,
-            composer_payload: self.composer_payload.clone(),
-            auto_save_enabled: self.auto_save_enabled,
-            auto_save_dir: self.auto_save_dir.clone(),
-            auto_save_format: self.auto_save_format,
-        };
-        config.save();
+        #[cfg(not(test))]
+        {
+            let config = SavedConfig {
+                collections: self.collections.clone(),
+                listener_addr: self.listener_addr.clone(),
+                composer_target: self.composer_target.clone(),
+                composer_payload_type: self.composer_payload_type,
+                composer_payload: self.composer_payload.clone(),
+                auto_save_enabled: self.auto_save_enabled,
+                auto_save_dir: self.auto_save_dir.clone(),
+                auto_save_format: self.auto_save_format,
+            };
+            config.save();
+        }
     }
 
     pub(crate) fn update_logger_config(&self) {

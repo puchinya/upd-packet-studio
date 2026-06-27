@@ -108,55 +108,95 @@ impl UdpStudioState {
                                         let req = &collection.requests[req_idx];
                                         let is_selected = Some(&req.id) == self.selected_request_id.as_ref();
                                         
-                                        ui.horizontal(|ui| {
-                                            ui.add_space(20.0); // Indentation
-                                            
-                                            // Method badge (UDP)
-                                            egui::Frame::NONE
-                                                .fill(egui::Color32::from_rgb(138, 43, 226))
-                                                .corner_radius(egui::CornerRadius::same(3))
-                                                .inner_margin(egui::Margin::symmetric(4, 1))
-                                                .show(ui, |ui| {
-                                                    ui.label(egui::RichText::new("UDP").color(egui::Color32::WHITE).size(9.0).strong());
+                                        let bg_fill = if is_selected {
+                                            ui.visuals().selection.bg_fill
+                                        } else {
+                                            egui::Color32::TRANSPARENT
+                                        };
+
+                                        let mut delete_clicked = false;
+                                        let mut send_clicked = false;
+                                        let mut label_clicked = false;
+
+                                        let frame_res = egui::Frame::NONE
+                                            .fill(bg_fill)
+                                            .corner_radius(egui::CornerRadius::same(4))
+                                            .inner_margin(egui::Margin::symmetric(4, 2))
+                                            .show(ui, |ui| {
+                                                ui.horizontal(|ui| {
+                                                    ui.add_space(16.0); // Indentation adjusted slightly for frame margins
+                                                    
+                                                    // Method badge (UDP)
+                                                    egui::Frame::NONE
+                                                        .fill(egui::Color32::from_rgb(138, 43, 226))
+                                                        .corner_radius(egui::CornerRadius::same(3))
+                                                        .inner_margin(egui::Margin::symmetric(4, 1))
+                                                        .show(ui, |ui| {
+                                                            ui.label(egui::RichText::new("UDP").color(egui::Color32::WHITE).size(9.0).strong());
+                                                        });
+                                                    
+                                                    ui.add_space(2.0);
+                                                    
+                                                    // Clickable request label button
+                                                    let label_text = if req.name.trim().is_empty() {
+                                                        "Unnamed Request".to_string()
+                                                    } else {
+                                                        req.name.clone()
+                                                    };
+                                                    
+                                                    // Truncate text if too long for the sidebar
+                                                    let display_name = if label_text.chars().count() > 18 {
+                                                        format!("{}...", label_text.chars().take(16).collect::<String>())
+                                                    } else {
+                                                        label_text
+                                                    };
+                                                    
+                                                    let rich_text = egui::RichText::new(display_name);
+                                                    let rich_text = if is_selected {
+                                                        rich_text.color(egui::Color32::WHITE).strong()
+                                                    } else {
+                                                        rich_text
+                                                    };
+                                                    
+                                                    let btn = ui.add(
+                                                        egui::Button::selectable(is_selected, rich_text)
+                                                            .frame(false)
+                                                    );
+                                                    if btn.clicked() {
+                                                        label_clicked = true;
+                                                    }
+                                                    
+                                                    // Quick Actions on Right
+                                                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                                        if ui.button("🗑").on_hover_text("Delete Request").clicked() {
+                                                            delete_clicked = true;
+                                                            delete_request = Some((collection.id.clone(), req.id.clone()));
+                                                        }
+                                                        let is_payload_valid = validate_payload(&req.payload, req.payload_type).is_ok();
+                                                        let send_btn = ui.add_enabled(is_payload_valid, egui::Button::new("🚀"));
+                                                        let send_btn = send_btn.on_hover_text(if is_payload_valid { "Send Packets" } else { "Invalid payload format" });
+                                                        if send_btn.clicked() {
+                                                            send_clicked = true;
+                                                            send_trigger = Some((req.target.clone(), req.payload_type, req.payload.clone()));
+                                                        }
+                                                    });
                                                 });
-                                            
-                                            ui.add_space(2.0);
-                                            
-                                            // Clickable request label button
-                                            let label_text = if req.name.trim().is_empty() {
-                                                "Unnamed Request".to_string()
-                                            } else {
-                                                req.name.clone()
-                                            };
-                                            
-                                            // Truncate text if too long for the sidebar
-                                            let display_name = if label_text.chars().count() > 18 {
-                                                format!("{}...", label_text.chars().take(16).collect::<String>())
-                                            } else {
-                                                label_text
-                                            };
-                                            
-                                            let btn = ui.add(
-                                                egui::Button::selectable(is_selected, display_name)
-                                                    .frame(false)
-                                            );
-                                            if btn.clicked() {
-                                                select_request = Some(req.id.clone());
-                                            }
-                                            
-                                            // Quick Actions on Right
-                                            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                                if ui.button("🗑").on_hover_text("Delete Request").clicked() {
-                                                    delete_request = Some((collection.id.clone(), req.id.clone()));
-                                                }
-                                                 let is_payload_valid = validate_payload(&req.payload, req.payload_type).is_ok();
-                                                 let send_btn = ui.add_enabled(is_payload_valid, egui::Button::new("🚀"));
-                                                 let send_btn = send_btn.on_hover_text(if is_payload_valid { "Send Packets" } else { "Invalid payload format" });
-                                                 if send_btn.clicked() {
-                                                     send_trigger = Some((req.target.clone(), req.payload_type, req.payload.clone()));
-                                                 }
                                             });
-                                        });
+
+                                        // Make the whole row frame clickable to select the request without intercepting child button clicks
+                                        let rect = frame_res.response.rect;
+                                        let mut row_clicked = false;
+                                        if ui.input(|i| i.pointer.primary_clicked()) {
+                                            if let Some(pos) = ui.input(|i| i.pointer.interact_pos()) {
+                                                if rect.contains(pos) && !delete_clicked && !send_clicked {
+                                                    row_clicked = true;
+                                                }
+                                            }
+                                        }
+                                        
+                                        if label_clicked || row_clicked {
+                                            select_request = Some(req.id.clone());
+                                        }
                                     }
                                 }
                             }
