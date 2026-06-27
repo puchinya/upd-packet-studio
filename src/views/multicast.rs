@@ -9,7 +9,7 @@ impl UdpStudioState {
             egui_i18n::set_language(&lang_id);
             egui_i18n::tr!(key)
         };
-        let tr_args = |key: &str, args: &std::collections::HashMap<std::borrow::Cow<'static, str>, egui_i18n::fluent_bundle::FluentValue<'_>>| {
+        let _tr_args = |key: &str, args: &std::collections::HashMap<std::borrow::Cow<'static, str>, egui_i18n::fluent_bundle::FluentValue<'_>>| {
             egui_i18n::set_language(&lang_id);
             let mut fluent_args = egui_i18n::fluent::FluentArgs::new();
             for (k, v) in args {
@@ -70,36 +70,61 @@ impl UdpStudioState {
 
                         ui.add_space(10.0);
 
-                        // Quick Presets
+                        // Quick Presets (dropdown menu)
                         ui.horizontal(|ui| {
-                            ui.label(egui::RichText::new(tr("mc-label-presets")).weak().size(11.0));
-                            
-                            let mut args_ac = std::collections::HashMap::new();
-                            args_ac.insert(std::borrow::Cow::Borrowed("ip"), "224.0.23.0".into());
-                            if ui.button("ECHONET Lite").on_hover_text(tr_args("mc-preset-tip", &args_ac)).clicked() {
-                                self.multicast_input_addr = "224.0.23.0".to_string();
-                                self.multicast_input_interface = "0.0.0.0".to_string();
-                            }
+                            let presets: &[(&str, &str, &str)] = &[
+                                ("ECHONET Lite", "224.0.23.0",      "0.0.0.0"),
+                                ("SSDP",         "239.255.255.250", "0.0.0.0"),
+                                ("mDNS",         "224.0.0.251",     "0.0.0.0"),
+                                ("All-Nodes",    "224.0.0.1",       "0.0.0.0"),
+                            ];
 
-                            let mut args_ssdp = std::collections::HashMap::new();
-                            args_ssdp.insert(std::borrow::Cow::Borrowed("ip"), "239.255.255.250".into());
-                            if ui.button("SSDP").on_hover_text(tr_args("mc-preset-tip", &args_ssdp)).clicked() {
-                                self.multicast_input_addr = "239.255.255.250".to_string();
-                                self.multicast_input_interface = "0.0.0.0".to_string();
-                            }
+                            let mut selected: Option<(&str, &str)> = None;
 
-                            let mut args_mdns = std::collections::HashMap::new();
-                            args_mdns.insert(std::borrow::Cow::Borrowed("ip"), "224.0.0.251".into());
-                            if ui.button("mDNS").on_hover_text(tr_args("mc-preset-tip", &args_mdns)).clicked() {
-                                self.multicast_input_addr = "224.0.0.251".to_string();
-                                self.multicast_input_interface = "0.0.0.0".to_string();
-                            }
+                            ui.menu_button(format!("{} ▾", tr("mc-label-presets")), |ui| {
+                                ui.set_min_width(190.0);
+                                ui.add_space(2.0);
+                                for (name, ip, iface) in presets {
+                                    // 行全体を1つのヒットエリアとして確保
+                                    let row_height = 26.0;
+                                    let (rect, response) = ui.allocate_exact_size(
+                                        egui::vec2(ui.available_width(), row_height),
+                                        egui::Sense::click(),
+                                    );
 
-                            let mut args_nodes = std::collections::HashMap::new();
-                            args_nodes.insert(std::borrow::Cow::Borrowed("ip"), "224.0.0.1".into());
-                            if ui.button("All-Nodes").on_hover_text(tr_args("mc-preset-tip", &args_nodes)).clicked() {
-                                self.multicast_input_addr = "224.0.0.1".to_string();
-                                self.multicast_input_interface = "0.0.0.0".to_string();
+                                    // ホバー／クリック時の背景ハイライト（行全体）
+                                    if response.hovered() || response.is_pointer_button_down_on() {
+                                        ui.painter().rect_filled(
+                                            rect,
+                                            egui::CornerRadius::same(4),
+                                            ui.visuals().widgets.hovered.bg_fill,
+                                        );
+                                    }
+
+                                    // プロトコル名（左寄せ）
+                                    ui.painter().text(
+                                        rect.left_center() + egui::vec2(8.0, 0.0),
+                                        egui::Align2::LEFT_CENTER,
+                                        *name,
+                                        egui::FontId::proportional(13.0),
+                                        if response.hovered() {
+                                            ui.visuals().widgets.hovered.text_color()
+                                        } else {
+                                            ui.visuals().text_color()
+                                        },
+                                    );
+
+                                    if response.clicked() {
+                                        selected = Some((ip, iface));
+                                        ui.close();
+                                    }
+                                }
+                                ui.add_space(2.0);
+                            });
+
+                            if let Some((ip, iface)) = selected {
+                                self.multicast_input_addr = ip.to_string();
+                                self.multicast_input_interface = iface.to_string();
                             }
                         });
 
