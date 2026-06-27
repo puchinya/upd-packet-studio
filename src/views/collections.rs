@@ -77,14 +77,17 @@ impl UdpStudioState {
                             let collection = &mut self.collections[col_idx];
                             
                             // Collection Header Row
-                            ui.horizontal(|ui| {
+                            {
+                            let row_height = ui.spacing().interact_size.y;
+                            let row_width = ui.available_width();
+                            ui.allocate_ui_with_layout(egui::vec2(row_width, row_height), egui::Layout::left_to_right(egui::Align::Center), |ui| {
                                 // Toggle Chevron
                                 let caret = if collection.is_expanded { "▼" } else { "▶" };
                                 if ui.add(egui::Button::new(caret).frame(false)).clicked() {
                                     toggle_expand = Some(collection.id.clone());
                                 }
                                 
-                                ui.label("📁");
+                                ui.add(egui::Button::new("📁").frame(false).sense(egui::Sense::hover()));
                                 
                                 // Editable Collection Name
                                 let name_edit = ui.add(
@@ -110,6 +113,7 @@ impl UdpStudioState {
                                     }
                                 });
                             });
+                            }
                             
                             // If expanded, list requests inside
                             if collection.is_expanded {
@@ -138,7 +142,9 @@ impl UdpStudioState {
                                             .corner_radius(egui::CornerRadius::same(4))
                                             .inner_margin(egui::Margin::symmetric(4, 2))
                                             .show(ui, |ui| {
-                                                ui.horizontal(|ui| {
+                                                let row_height = ui.spacing().interact_size.y;
+                                                let row_width = ui.available_width();
+                                                ui.allocate_ui_with_layout(egui::vec2(row_width, row_height), egui::Layout::left_to_right(egui::Align::Center), |ui| {
                                                     ui.add_space(16.0); // Indentation adjusted slightly for frame margins
                                                     
                                                     // Method badge (UDP)

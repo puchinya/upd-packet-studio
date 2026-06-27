@@ -114,6 +114,9 @@ pub fn setup_custom_styles(ctx: &egui::Context) {
 
     style.spacing.item_spacing = egui::vec2(8.0, 6.0);
     style.spacing.button_padding = egui::vec2(10.0, 5.0);
+    // interact_size.y must match actual button height = galley_height + 2*button_padding.y
+    // Noto Sans JP 13pt → galley height ≈ 20px → button height ≈ 20+10 = 30px
+    style.spacing.interact_size = egui::vec2(40.0, 30.0);
     style.spacing.window_margin = egui::Margin::same(12);
     ctx.set_global_style(style);
 }

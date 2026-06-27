@@ -76,8 +76,13 @@ impl UdpStudioState {
         }
         
         ui.vertical(|ui| {
-            // Header toolbar
-            ui.horizontal(|ui| {
+            // Header toolbar - Row 1: action buttons
+            let row_height = ui.spacing().interact_size.y;
+            let row_width = ui.available_width();
+            ui.allocate_ui_with_layout(
+                egui::vec2(row_width, row_height),
+                egui::Layout::left_to_right(egui::Align::Center),
+                |ui| {
                 if ui.button(tr("log-btn-clear")).clicked() {
                     self.logs.clear();
                     self.filtered_indices.clear();
@@ -172,14 +177,25 @@ impl UdpStudioState {
                 }
                 
                 ui.checkbox(&mut self.auto_scroll, tr("log-checkbox-autoscroll"));
-                
-                ui.add_space(15.0);
-                ui.label(tr("log-label-ip-filter"));
-                if ui.text_edit_singleline(&mut self.filter_text).changed() {
-                    self.update_filtered_indices();
-                }
             });
-            
+
+            // Header toolbar - Row 2: IP filter (full width)
+            let row_height = ui.spacing().interact_size.y;
+            let row_width = ui.available_width();
+            ui.allocate_ui_with_layout(
+                egui::vec2(row_width, row_height),
+                egui::Layout::left_to_right(egui::Align::Center),
+                |ui| {
+                    ui.label(tr("log-label-ip-filter"));
+                    if ui.add(
+                        egui::TextEdit::singleline(&mut self.filter_text)
+                            .desired_width(f32::INFINITY)
+                    ).changed() {
+                        self.update_filtered_indices();
+                    }
+                }
+            );
+
             ui.separator();
 
             let filtered_indices = &self.filtered_indices;
@@ -204,7 +220,7 @@ impl UdpStudioState {
             table = table.stick_to_bottom(self.auto_scroll);
 
             table
-                .header(24.0, |mut header| {
+                .header(28.0, |mut header| {
                     header.col(|ui| { ui.strong(tr("log-hdr-no")); });
                     header.col(|ui| { ui.strong(tr("log-hdr-time")); });
                     header.col(|ui| { ui.strong(tr("log-hdr-type")); });
@@ -214,7 +230,7 @@ impl UdpStudioState {
                     header.col(|ui| { ui.strong(tr("log-hdr-info")); });
                 })
                 .body(|body| {
-                    body.rows(20.0, filtered_indices.len(), |mut row| {
+                    body.rows(32.0, filtered_indices.len(), |mut row| {
                         let row_index = row.index();
                         let orig_idx = filtered_indices[row_index];
                         let entry = &self.logs[orig_idx];
