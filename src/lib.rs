@@ -1320,7 +1320,17 @@ impl eframe::App for MainApp {
         if self.state.about_open {
             let mut open = self.state.about_open;
             let mut close_clicked = false;
-            egui::Window::new("About")
+
+            let about_title = self.state.tr("about-title");
+            let about_desc = self.state.tr("about-desc");
+            let about_license_lbl = self.state.tr("about-license-label");
+            let about_show_oss = self.state.tr("about-show-oss");
+            let about_oss_title = self.state.tr("about-oss-title");
+            let about_oss_desc = self.state.tr("about-oss-description");
+            let about_back = self.state.tr("about-back");
+            let close_btn_label = self.state.tr("settings-close");
+
+            egui::Window::new(about_title)
                 .open(&mut open)
                 .resizable(true)
                 .collapsible(false)
@@ -1334,11 +1344,11 @@ impl eframe::App for MainApp {
                                     ui.heading("UDP Packet Studio");
                                     ui.label(concat!("Version ", env!("CARGO_PKG_VERSION")));
                                     ui.add_space(8.0);
-                                    ui.label("A professional tool to compose, send, and inspect UDP packets.");
+                                    ui.label(about_desc);
                                     ui.add_space(12.0);
                                 });
 
-                                ui.label("Application License (LICENSE.md):");
+                                ui.label(about_license_lbl);
                                 ui.add_space(4.0);
                                 
                                 let mut license_text = include_str!("../LICENSE.md").to_string();
@@ -1355,15 +1365,15 @@ impl eframe::App for MainApp {
 
                                 ui.add_space(12.0);
                                 ui.horizontal(|ui| {
-                                    if ui.button("🌐 Show Open Source Licenses").clicked() {
+                                    if ui.button(about_show_oss).clicked() {
                                         self.state.about_tab = AboutTab::ThirdParty;
                                     }
                                 });
                             }
                             AboutTab::ThirdParty => {
-                                ui.heading("Third Party Licenses");
+                                ui.heading(about_oss_title);
                                 ui.add_space(4.0);
-                                ui.label("This software is built using the following open source libraries:");
+                                ui.label(about_oss_desc);
                                 ui.add_space(8.0);
 
                                 egui::ScrollArea::vertical()
@@ -1453,7 +1463,7 @@ copies or substantial portions of the Software."
                                     });
 
                                 ui.add_space(12.0);
-                                if ui.button("⬅ Back to App Info").clicked() {
+                                if ui.button(about_back).clicked() {
                                     self.state.about_tab = AboutTab::Info;
                                 }
                             }
@@ -1464,7 +1474,7 @@ copies or substantial portions of the Software."
                         ui.add_space(8.0);
                         
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                            if ui.button("Close").clicked() {
+                            if ui.button(close_btn_label).clicked() {
                                 close_clicked = true;
                             }
                         });

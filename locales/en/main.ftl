@@ -13,6 +13,14 @@ titlebar-status-active = ● Active
 titlebar-status-offline = ● Offline
 titlebar-preferences = Preferences...
 titlebar-about = About...
+about-title = About
+about-desc = A professional desktop utility to compose, send, and inspect UDP packets, with support for decoding protocols like ECHONET Lite in real-time.
+about-license-label = Application License (LICENSE.md):
+about-show-oss = 🌐 Show Open Source Licenses
+about-oss-title = Third Party Licenses
+about-oss-description = This software is built using the following open source libraries and resources:
+about-back = ⬅ Back to App Info
+
 
 # Status Bar
 statusbar-bound = Bound: { $addr }

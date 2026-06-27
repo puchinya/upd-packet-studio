@@ -13,6 +13,14 @@ titlebar-status-active = ● 有効
 titlebar-status-offline = ● オフライン
 titlebar-preferences = 設定...
 titlebar-about = 本アプリについて...
+about-title = 本アプリについて
+about-desc = UDPパケットの送受信、カスタムパケットの作成（Composer）、ECHONET Lite などのプロトコルデコードをリアルタイムに行う開発者向けのデスクトップツールです。
+about-license-label = アプリケーションのライセンス (LICENSE.md):
+about-show-oss = 🌐 オープンソースライセンスを表示
+about-oss-title = サードパーティライセンス
+about-oss-description = 本ソフトウェアは、以下のオープンソースライブラリおよびリソースを使用して構築されています：
+about-back = ⬅ アプリ情報に戻る
+
 
 # Status Bar
 statusbar-bound = バインド中: { $addr }
