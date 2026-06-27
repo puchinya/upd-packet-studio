@@ -53,6 +53,7 @@ fn make_test_state() -> UdpStudioState {
         auto_save_enabled: false,
         auto_save_dir: String::new(),
         auto_save_format: LogExportFormat::Csv,
+        bind_time: None,
         settings_open: false,
         settings_reset_confirm_open: false,
         about_open: false,

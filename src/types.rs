@@ -250,6 +250,7 @@ pub enum LoggerCommand {
         dir: String,
         format: LogExportFormat,
         listener_addr: String,
+        bind_time: Option<chrono::DateTime<chrono::Local>>,
     },
 }
 

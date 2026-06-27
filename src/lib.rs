@@ -88,10 +88,10 @@ pub struct UdpStudioState {
     // Inspector fields
     pub inspector_protocol: InspectorProtocol,
 
-    // Auto-save logger fields
     pub auto_save_enabled: bool,
     pub auto_save_dir: String,
     pub auto_save_format: LogExportFormat,
+    pub bind_time: Option<chrono::DateTime<chrono::Local>>,
     pub settings_open: bool,
     pub settings_reset_confirm_open: bool,
     pub about_open: bool,
@@ -121,6 +121,7 @@ impl UdpStudioState {
             "./logs".to_string()
         };
         self.auto_save_format = LogExportFormat::Csv;
+        self.bind_time = None;
         self.language_setting = LanguageSetting::System;
         self.save_config();
         self.update_logger_config();
@@ -203,6 +204,7 @@ impl UdpStudioState {
             dir: self.auto_save_dir.clone(),
             format: self.auto_save_format,
             listener_addr,
+            bind_time: self.bind_time,
         });
     }
 
@@ -353,18 +355,21 @@ impl MainApp {
             let mut dir = init_dir;
             let mut format = init_format;
             let mut listener_addr = init_addr;
+            let mut bind_time: Option<chrono::DateTime<chrono::Local>> = None;
             
             while let Ok(cmd) = rx_logger.recv() {
                 match cmd {
-                    LoggerCommand::Configure { enabled: e, dir: d, format: f, listener_addr: addr } => {
+                    LoggerCommand::Configure { enabled: e, dir: d, format: f, listener_addr: addr, bind_time: bt } => {
                         enabled = e;
                         dir = d;
                         format = f;
                         listener_addr = addr;
+                        bind_time = bt;
                     }
                     LoggerCommand::Log(entry) => {
                         if enabled && !dir.is_empty() {
-                            let date_str = entry.timestamp.format("%Y-%m-%d").to_string();
+                            let ref_time = bind_time.unwrap_or(entry.timestamp);
+                            let date_str = ref_time.format("%Y-%m-%d_%H-%M-%S").to_string();
                             let extension = match format {
                                 LogExportFormat::Csv => "csv",
                                 LogExportFormat::Json => "json",
@@ -565,6 +570,7 @@ impl MainApp {
             auto_save_enabled: config.auto_save_enabled,
             auto_save_dir: config.auto_save_dir,
             auto_save_format: config.auto_save_format,
+            bind_time: None,
             settings_open: false,
             settings_reset_confirm_open: false,
             about_open: false,
@@ -699,29 +705,32 @@ impl eframe::App for MainApp {
         // Handle all incoming events from the background UDP worker thread
         while let Ok(event) = self.state.rx_event.try_recv() {
             match event {
-                UdpEvent::Bound(addr) => {
-                    self.state.is_listening = true;
-                    self.state.bound_addr = Some(addr.to_string());
-                    let addr_str = addr.to_string();
-                    if let Some(idx) = addr_str.rfind(':') {
-                        let (ip, port) = addr_str.split_at(idx);
-                        self.state.listener_ip = ip.to_string();
-                        self.state.listener_port = port[1..].to_string();
-                    } else {
-                        self.state.listener_ip = addr_str;
-                        self.state.listener_port = "9000".to_string();
-                    }
-                    self.state.listener_error = None;
-                    self.state.add_system_info(format!("Listening socket bound to {}", addr));
-                    self.state.save_config();
-                    self.state.update_logger_config();
-                }
-                UdpEvent::Unbound => {
-                    self.state.is_listening = false;
-                    self.state.bound_addr = None;
-                    self.state.multicast_groups.clear();
-                    self.state.add_system_info("Listening socket unbound".to_string());
-                }
+                 UdpEvent::Bound(addr) => {
+                     self.state.is_listening = true;
+                     self.state.bound_addr = Some(addr.to_string());
+                     self.state.bind_time = Some(chrono::Local::now());
+                     let addr_str = addr.to_string();
+                     if let Some(idx) = addr_str.rfind(':') {
+                         let (ip, port) = addr_str.split_at(idx);
+                         self.state.listener_ip = ip.to_string();
+                         self.state.listener_port = port[1..].to_string();
+                     } else {
+                         self.state.listener_ip = addr_str;
+                         self.state.listener_port = "9000".to_string();
+                     }
+                     self.state.listener_error = None;
+                     self.state.add_system_info(format!("Listening socket bound to {}", addr));
+                     self.state.save_config();
+                     self.state.update_logger_config();
+                 }
+                 UdpEvent::Unbound => {
+                     self.state.is_listening = false;
+                     self.state.bound_addr = None;
+                     self.state.bind_time = None;
+                     self.state.multicast_groups.clear();
+                     self.state.add_system_info("Listening socket unbound".to_string());
+                     self.state.update_logger_config();
+                 }
                 UdpEvent::Sent { to, data, timestamp } => {
                     let entry = LogEntry::new(timestamp, LogDirection::Sent, to, data);
                     self.state.push_log(entry);
