@@ -69,7 +69,7 @@ cat <<EOF > "${CONTENTS_DIR}/Info.plist"
     <key>CFBundleVersion</key>
     <string>1</string>
     <key>LSMinimumSystemVersion</key>
-    <string>10.12</string>
+    <string>12.0</string>
     <key>NSHighResolutionCapable</key>
     <true/>
     <key>LSApplicationCategoryType</key>
@@ -111,6 +111,20 @@ if [ -n "$CODESIGN_IDENTITY" ]; then
 else
   echo "Warning: No Apple Distribution codesign identity found. Skipping App Bundle codesigning."
   echo "You will not be able to submit to the App Store without codesigning."
+fi
+
+# 1b. Embed provisioning profile
+if [ -z "$PROVISIONING_PROFILE" ]; then
+  # Search for any .provisionprofile file in current directory or scripts/
+  PROVISIONING_PROFILE=$(find . -maxdepth 2 -name "*.provisionprofile" | head -n 1)
+fi
+
+if [ -n "$PROVISIONING_PROFILE" ]; then
+  echo "Embedding provisioning profile: ${PROVISIONING_PROFILE}"
+  cp "${PROVISIONING_PROFILE}" "${CONTENTS_DIR}/embedded.provisionprofile"
+else
+  echo "Warning: No provisioning profile found. Set PROVISIONING_PROFILE env var or place a .provisionprofile file here."
+  echo "You will not be able to submit to TestFlight or the App Store without it."
 fi
 
 # 2. Build the Installer Package (.pkg)
