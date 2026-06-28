@@ -116,9 +116,21 @@ el-deoj-preset-custom = カスタムオブジェクト...
 
 el-label-esv = サービスコード (ESV):
 el-esv-preset-get = Get (0x62 - プロパティ値読み出し要求)
+el-esv-preset-getres = Get_Res (0x72 - プロパティ値読み出し応答)
 el-esv-preset-setc = SetC (0x61 - プロパティ値書き込み要求・応答あり)
+el-esv-preset-setcsna = SetC_SNA (0x71 - プロパティ値書き込み不可応答)
 el-esv-preset-seti = SetI (0x60 - プロパティ値書き込み要求・応答なし)
+el-esv-preset-setisna = SetI_SNA (0x70 - プロパティ値書き込み不可応答)
+el-esv-preset-infreq = INF_REQ (0x63 - プロパティ値通知要求)
 el-esv-preset-inf = INF (0x73 - プロパティ値通知)
+el-esv-preset-infsna = INF_SNA (0x74 - プロパティ値通知不可応答)
+el-esv-preset-infc = INFC (0x7A - プロパティ値通知（応答要）)
+el-esv-preset-infcres = INFC_Res (0x7B - プロパティ値通知応答)
+el-esv-preset-setget = SetGet (0x6E - プロパティ値書き込み・読み出し要求)
+el-esv-preset-setgetres = SetGet_Res (0x7E - プロパティ値書き込み・読み出し応答)
+el-esv-preset-setgetsna = SetGet_SNA (0x7F - プロパティ値書き込み・読み出し不可応答)
+el-esv-preset-setres = Set_Res (0x71 - プロパティ値書き込み応答)
+el-esv-preset-setires = SetI_Res (0x74 - プロパティ値書き込み応答（応答不要）)
 
 el-label-epc = プロパティコード (EPC):
 el-epc-preset-status = 動作状態 (0x80)

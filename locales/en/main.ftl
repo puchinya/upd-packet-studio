@@ -116,9 +116,21 @@ el-deoj-preset-custom = Custom Object...
 
 el-label-esv = Service Code (ESV):
 el-esv-preset-get = Get (0x62 - Property Read Request)
-el-esv-preset-setc = SetC (0x61 - Property Write, Response Req)
+el-esv-preset-getres = Get_Res (0x72 - Property Read Response)
+el-esv-preset-setc = SetC (0x61 - Property Write, Response Required)
+el-esv-preset-setcsna = SetC_SNA (0x71 - Property Write Not Accepted)
 el-esv-preset-seti = SetI (0x60 - Property Write, No Response)
+el-esv-preset-setisna = SetI_SNA (0x70 - Property Write Not Accepted, No Response)
+el-esv-preset-infreq = INF_REQ (0x63 - Property Notification Request)
 el-esv-preset-inf = INF (0x73 - Property Notification)
+el-esv-preset-infsna = INF_SNA (0x74 - Property Notification Not Accepted)
+el-esv-preset-infc = INFC (0x7A - Property Notification (Response Required))
+el-esv-preset-infcres = INFC_Res (0x7B - Property Notification Response)
+el-esv-preset-setget = SetGet (0x6E - Property Write & Read Request)
+el-esv-preset-setgetres = SetGet_Res (0x7E - Property Write & Read Response)
+el-esv-preset-setgetsna = SetGet_SNA (0x7F - Property Write & Read Not Accepted)
+el-esv-preset-setres = Set_Res (0x71 - Property Write Response)
+el-esv-preset-setires = SetI_Res (0x74 - Property Write Response, No Response Required)
 
 el-label-epc = Property Code (EPC):
 el-epc-preset-status = Operation Status (0x80)

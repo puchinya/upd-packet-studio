@@ -26,10 +26,13 @@ impl UdpStudioState {
             0 => "62", // Get
             1 => "61", // SetC
             2 => "60", // SetI
-            3 => "73", // INF
+            3 => "63", // INF_REQ
+            4 => "73", // INF
+            5 => "7A", // INFC
+            6 => "6E", // SetGet
             _ => "62",
         };
-        let is_get = esv == "62";
+        let is_get = esv == "62" || esv == "63";
 
         if self.el_properties.is_empty() {
             return Err(self.tr("el-err-epc"));
@@ -224,7 +227,10 @@ impl UdpStudioState {
                             0 => tr("el-esv-preset-get"),
                             1 => tr("el-esv-preset-setc"),
                             2 => tr("el-esv-preset-seti"),
-                            3 => tr("el-esv-preset-inf"),
+                            3 => tr("el-esv-preset-infreq"),
+                            4 => tr("el-esv-preset-inf"),
+                            5 => tr("el-esv-preset-infc"),
+                            6 => tr("el-esv-preset-setget"),
                             _ => tr("el-esv-preset-get").to_string(),
                         };
                         egui::ComboBox::from_id_salt("esv_combo_shared")
@@ -233,13 +239,17 @@ impl UdpStudioState {
                                 ui.selectable_value(&mut self.el_esv_preset, 0, tr("el-esv-preset-get"));
                                 ui.selectable_value(&mut self.el_esv_preset, 1, tr("el-esv-preset-setc"));
                                 ui.selectable_value(&mut self.el_esv_preset, 2, tr("el-esv-preset-seti"));
-                                ui.selectable_value(&mut self.el_esv_preset, 3, tr("el-esv-preset-inf"));
+                                ui.selectable_value(&mut self.el_esv_preset, 3, tr("el-esv-preset-infreq"));
+                                ui.selectable_value(&mut self.el_esv_preset, 4, tr("el-esv-preset-inf"));
+                                ui.selectable_value(&mut self.el_esv_preset, 5, tr("el-esv-preset-infc"));
+                                ui.selectable_value(&mut self.el_esv_preset, 6, tr("el-esv-preset-setget"));
                             });
                         ui.end_row();
                     });
 
                 // ── EPC list (multi-row) ──────────────────────────────────────────────
-                let is_get = self.el_esv_preset == 0;
+                // preset 0=Get, 3=INF_REQ -> no EDT needed
+                let is_get = self.el_esv_preset == 0 || self.el_esv_preset == 3;
 
                 // Resolve EPC dropdown items for the selected class
                 let epc_list: Vec<(String, String)> = {
