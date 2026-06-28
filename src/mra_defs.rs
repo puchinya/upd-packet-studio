@@ -15,6 +15,7 @@ pub struct RawMraProperty {
     #[serde(rename = "shortName")]
     pub short_name: String,
     pub descriptions: Option<RawMraLocalizedString>,
+    pub data: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -35,6 +36,7 @@ pub struct PropertyInfo {
     pub name_en: String,
     pub description_ja: Option<String>,
     pub description_en: Option<String>,
+    pub edt_candidates: Vec<(String, String, String)>,
 }
 
 #[derive(Debug, Clone)]
