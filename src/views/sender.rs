@@ -473,8 +473,8 @@ impl UdpStudioState {
                             }
                             ui.menu_button("▾", |ui| {
                                 ui.set_min_width(150.0);
-                                ui.menu_button("Presets", |ui| {
-                                    if ui.button("ECHONET Lite : 3610").clicked() {
+                                ui.menu_button(tr("composer-port-preset-section"), |ui| {
+                                    if ui.button(tr("composer-port-preset-echonet")).clicked() {
                                         port_chosen = Some("3610".to_string());
                                         ui.close();
                                     }
