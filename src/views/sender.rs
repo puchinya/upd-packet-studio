@@ -16,22 +16,8 @@ impl UdpStudioState {
             return Err(self.tr("el-err-seoj"));
         }
 
-        // Resolve DEOJ: preset 0 = custom (el_deoj_custom), preset >= 1 = MRA class (el_deoj_eoj + "01")
-        let deoj_clean: String = if self.el_deoj_preset == 0 {
-            // Custom mode: use the raw text field
-            self.el_deoj_custom.chars().filter(|c| c.is_ascii_hexdigit()).collect()
-        } else if !self.el_deoj_eoj.is_empty() {
-            // MRA class selected: el_deoj_eoj is 4 hex chars (group+class), append instance "01"
-            let eoj: String = self.el_deoj_eoj.chars().filter(|c| c.is_ascii_hexdigit()).collect();
-            if eoj.len() == 4 {
-                format!("{}01", eoj)
-            } else {
-                eoj
-            }
-        } else {
-            // Fallback
-            self.el_deoj_custom.chars().filter(|c| c.is_ascii_hexdigit()).collect()
-        };
+        // Resolve DEOJ: use self.el_deoj_custom directly
+        let deoj_clean: String = self.el_deoj_custom.chars().filter(|c| c.is_ascii_hexdigit()).collect();
         if deoj_clean.len() != 6 {
             return Err(self.tr("el-err-deoj"));
         }
@@ -143,38 +129,80 @@ impl UdpStudioState {
 
                         // SEOJ
                         ui.label(tr("el-label-seoj"));
-                        ui.text_edit_singleline(&mut self.el_seoj);
+                        ui.horizontal(|ui| {
+                            ui.add(egui::TextEdit::singleline(&mut self.el_seoj).desired_width(70.0));
+                            
+                            let current_seoj = self.el_seoj.trim().to_uppercase();
+                            let matched_seoj_label = if current_seoj.len() >= 4 {
+                                class_list.iter()
+                                    .find(|(eoj_4, _)| current_seoj.starts_with(eoj_4))
+                                    .map(|(_, l)| l.clone())
+                                    .unwrap_or_else(|| tr("el-deoj-preset-custom").to_string())
+                            } else {
+                                tr("el-deoj-preset-custom").to_string()
+                            };
+
+                            egui::ComboBox::from_id_salt("seoj_combo_mra")
+                                .selected_text(matched_seoj_label)
+                                .width(220.0)
+                                .show_ui(ui, |ui| {
+                                    for (eoj_4, label) in &class_list {
+                                        if eoj_4 == "__custom__" {
+                                            let is_custom_selected = current_seoj.len() < 4 || !class_list.iter().any(|(x, _)| current_seoj.starts_with(x));
+                                            if ui.selectable_label(is_custom_selected, label).clicked() {
+                                                // No-op or custom
+                                            }
+                                        } else {
+                                            let is_selected = current_seoj.starts_with(eoj_4);
+                                            if ui.selectable_label(is_selected, label).clicked() {
+                                                let inst = if current_seoj.len() >= 6 { &current_seoj[4..6] } else { "01" };
+                                                self.el_seoj = format!("{}{}", eoj_4, inst);
+                                            }
+                                        }
+                                    }
+                                });
+                        });
                         ui.end_row();
 
                         // DEOJ
                         ui.label(tr("el-label-deoj"));
                         ui.horizontal(|ui| {
-                            // resolve current label
-                            let current_deoj_label = if self.el_deoj_preset == 0 {
-                                tr("el-deoj-preset-custom").to_string()
-                            } else if self.el_deoj_preset - 1 < class_list.len().saturating_sub(1) {
-                                class_list[self.el_deoj_preset].1.clone()
+                            ui.add(egui::TextEdit::singleline(&mut self.el_deoj_custom).desired_width(70.0));
+                            
+                            let current_deoj = self.el_deoj_custom.trim().to_uppercase();
+                            let matched_deoj_label = if current_deoj.len() >= 4 {
+                                class_list.iter()
+                                    .find(|(eoj_4, _)| current_deoj.starts_with(eoj_4))
+                                    .map(|(_, l)| l.clone())
+                                    .unwrap_or_else(|| tr("el-deoj-preset-custom").to_string())
                             } else {
                                 tr("el-deoj-preset-custom").to_string()
                             };
 
                             egui::ComboBox::from_id_salt("deoj_combo_mra")
-                                .selected_text(current_deoj_label)
-                                .width(260.0)
+                                .selected_text(matched_deoj_label)
+                                .width(220.0)
                                 .show_ui(ui, |ui| {
-                                    for (idx, (eoj, label)) in class_list.iter().enumerate() {
-                                        let selected = &mut self.el_deoj_preset;
-                                        if ui.selectable_value(selected, idx, label).clicked() {
-                                            if eoj == "__custom__" {
+                                    for (idx, (eoj_4, label)) in class_list.iter().enumerate() {
+                                        if eoj_4 == "__custom__" {
+                                            let is_custom_selected = current_deoj.len() < 4 || !class_list.iter().any(|(x, _)| current_deoj.starts_with(x));
+                                            if ui.selectable_label(is_custom_selected, label).clicked() {
+                                                self.el_deoj_preset = 0;
                                                 self.el_deoj_eoj = String::new();
-                                            } else {
-                                                self.el_deoj_eoj = eoj.clone();
+                                            }
+                                        } else {
+                                            let is_selected = current_deoj.starts_with(eoj_4);
+                                            if ui.selectable_label(is_selected, label).clicked() {
+                                                self.el_deoj_preset = idx;
+                                                self.el_deoj_eoj = eoj_4.clone();
+                                                let inst = if current_deoj.len() >= 6 { &current_deoj[4..6] } else { "01" };
+                                                self.el_deoj_custom = format!("{}{}", eoj_4, inst);
+
                                                 // auto-populate EPC list with class props
                                                 if let Some(info) = self.mra_db.classes.get(&(
-                                                    u8::from_str_radix(&eoj[0..2], 16).unwrap_or(0),
-                                                    u8::from_str_radix(&eoj[2..4], 16).unwrap_or(0),
+                                                    u8::from_str_radix(&eoj_4[0..2], 16).unwrap_or(0),
+                                                    u8::from_str_radix(&eoj_4[2..4], 16).unwrap_or(0),
                                                 )) {
-                                                    // reset EPC list to first property of this class
                                                     let first_epc = info.properties.keys()
                                                         .filter(|&&e| e >= 0xE0) // device-specific EPCs
                                                         .copied().min()
@@ -187,11 +215,6 @@ impl UdpStudioState {
                                         }
                                     }
                                 });
-
-                            // Custom text field
-                            if self.el_deoj_preset == 0 {
-                                ui.text_edit_singleline(&mut self.el_deoj_custom);
-                            }
                         });
                         ui.end_row();
 
@@ -220,17 +243,13 @@ impl UdpStudioState {
 
                 // Resolve EPC dropdown items for the selected class
                 let epc_list: Vec<(String, String)> = {
-                    let eoj_key = if self.el_deoj_preset == 0 {
-                        None
+                    let current_deoj = self.el_deoj_custom.trim().to_uppercase();
+                    let eoj_key = if current_deoj.len() >= 4 {
+                        let g = u8::from_str_radix(&current_deoj[0..2], 16).ok();
+                        let c = u8::from_str_radix(&current_deoj[2..4], 16).ok();
+                        g.zip(c)
                     } else {
-                        let eoj = &self.el_deoj_eoj;
-                        if eoj.len() == 4 {
-                            let g = u8::from_str_radix(&eoj[0..2], 16).ok();
-                            let c = u8::from_str_radix(&eoj[2..4], 16).ok();
-                            g.zip(c)
-                        } else {
-                            None
-                        }
+                        None
                     };
 
                     if let Some((g, c)) = eoj_key {
@@ -267,30 +286,27 @@ impl UdpStudioState {
                     ui.horizontal(|ui| {
                         ui.label(format!("#{}", i + 1));
 
-                        // EPC dropdown (if MRA class known) or text
+                        // Always display the hex text field
+                        ui.label("EPC:");
+                        ui.add(egui::TextEdit::singleline(&mut prop.epc).desired_width(30.0));
+
+                        // EPC dropdown (if MRA class properties are available)
                         if !epc_list.is_empty() {
                             let current_epc_label = epc_list.iter()
                                 .find(|(e, _)| *e == prop.epc.to_uppercase())
                                 .map(|(_, l)| l.clone())
-                                .unwrap_or_else(|| format!("0x{}", prop.epc));
+                                .unwrap_or_else(|| format!("Custom (0x{})", prop.epc));
                             egui::ComboBox::from_id_salt(format!("epc_combo_{}", i))
                                 .selected_text(current_epc_label)
-                                .width(220.0)
+                                .width(180.0)
                                 .show_ui(ui, |ui| {
                                     for (epc_str, label) in &epc_list {
-                                        if ui.selectable_label(
-                                            prop.epc.to_uppercase() == *epc_str,
-                                            label,
-                                        ).clicked() {
+                                        let is_selected = prop.epc.to_uppercase() == *epc_str;
+                                        if ui.selectable_label(is_selected, label).clicked() {
                                             prop.epc = epc_str.clone();
                                         }
                                     }
                                 });
-                        } else {
-                            ui.label("EPC:");
-                            ui.add(egui::TextEdit::singleline(&mut prop.epc)
-                                .desired_width(40.0)
-                                .hint_text("e.g. 80"));
                         }
 
                         // EDT field (hidden for GET)

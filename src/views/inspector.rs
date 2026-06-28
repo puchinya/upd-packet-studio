@@ -96,135 +96,137 @@ impl UdpStudioState {
                                 });
                         }
                         InspectorProtocol::EchonetLite => {
-                            if entry.data.len() < 12 {
-                                ui.colored_label(
-                                    egui::Color32::from_rgb(255, 100, 100),
-                                    tr("ins-el-err-too-short")
-                                );
-                            } else {
-                                let ehd1 = entry.data[0];
-                                let ehd2 = entry.data[1];
-                                
-                                if ehd1 != 0x10 {
-                                    let mut args = std::collections::HashMap::new();
-                                    args.insert(std::borrow::Cow::Borrowed("val"), format!("{:02X}", ehd1).into());
-                                    ui.colored_label(
-                                        egui::Color32::from_rgb(255, 180, 100),
-                                        tr_args("ins-el-warn-ehd1", &args)
-                                    );
-                                    ui.add_space(4.0);
-                                }
-                                
-                                let tid_h = entry.data[2];
-                                let tid_l = entry.data[3];
-                                let seoj = &entry.data[4..7];
-                                let deoj = &entry.data[7..10];
-                                let esv = entry.data[10];
-                                let opc = entry.data[11];
-                                
-                                // Frame structure grid
-                                egui::Grid::new("el_inspector_grid")
-                                    .num_columns(2)
-                                    .spacing([12.0, 6.0])
-                                    .show(ui, |ui| {
-                                        ui.label(tr("ins-el-label-ehd1"));
-                                        ui.monospace(format!("0x{:02X} (ECHONET Lite)", ehd1));
-                                        ui.end_row();
-                                        
-                                        ui.label(tr("ins-el-label-ehd2"));
-                                        let fmt_str = if ehd2 == 0x81 { "1" } else { "2" };
-                                        let mut args_fmt = std::collections::HashMap::new();
-                                        args_fmt.insert(std::borrow::Cow::Borrowed("fmt"), fmt_str.into());
-                                        ui.monospace(format!("0x{:02X} ({})", ehd2, tr_args("ins-el-format", &args_fmt)));
-                                        ui.end_row();
-                                        
-                                        ui.label(tr("ins-el-label-tid"));
-                                        ui.monospace(format!("0x{:02X}{:02X}", tid_h, tid_l));
-                                        ui.end_row();
-                                        
-                                        ui.label(tr("ins-el-label-seoj"));
-                                        ui.label(translate_object(seoj, &mra_db, use_ja));
-                                        ui.end_row();
-                                        
-                                        ui.label(tr("ins-el-label-deoj"));
-                                        ui.label(translate_object(deoj, &mra_db, use_ja));
-                                        ui.end_row();
-                                        
-                                        ui.label(tr("ins-el-label-esv"));
-                                        ui.label(translate_esv(esv));
-                                        ui.end_row();
-                                        
-                                        ui.label(tr("ins-el-label-opc"));
-                                        ui.monospace(format!("{}", opc));
-                                        ui.end_row();
-                                    });
-                                
-                                ui.add_space(10.0);
-                                ui.strong(tr("ins-el-title-props"));
-                                ui.add_space(4.0);
-                                
-                                // Parse properties
-                                let mut properties = Vec::new();
-                                let mut curr_offset = 12;
-                                let mut is_malformed = false;
-                                
-                                for _ in 0..opc {
-                                    if curr_offset + 2 > entry.data.len() {
-                                        is_malformed = true;
-                                        break;
-                                    }
-                                    let epc = entry.data[curr_offset];
-                                    let pdc = entry.data[curr_offset + 1];
-                                    
-                                    curr_offset += 2;
-                                    
-                                    if curr_offset + (pdc as usize) > entry.data.len() {
-                                        is_malformed = true;
-                                        break;
-                                    }
-                                    
-                                    let edt = entry.data[curr_offset..curr_offset + (pdc as usize)].to_vec();
-                                    curr_offset += pdc as usize;
-                                    
-                                    properties.push(EchonetProperty { epc, pdc, edt });
-                                }
-                                
-                                // Render properties
-                                egui::ScrollArea::vertical().id_salt("el_props_scroll").show(ui, |ui| {
-                                    for (prop_idx, prop) in properties.iter().enumerate() {
-                                        egui::Frame::NONE
-                                            .fill(ui.visuals().widgets.inactive.bg_fill)
-                                            .corner_radius(egui::CornerRadius::same(4))
-                                            .inner_margin(egui::Margin::symmetric(10, 8))
-                                            .show(ui, |ui| {
-                                                ui.vertical(|ui| {
-                                                    ui.horizontal(|ui| {
-                                                        ui.strong(format!("#{}:", prop_idx + 1));
-                                                        ui.label("EPC:");
-                                                        ui.monospace(format!("0x{:02X}", prop.epc));
-                                                        ui.label(translate_epc(prop.epc, deoj, &mra_db, use_ja));
-                                                    });
-                                                    ui.add_space(2.0);
-                                                    ui.horizontal(|ui| {
-                                                        ui.label("PDC:");
-                                                        ui.monospace(format!("{}", prop.pdc));
-                                                        ui.separator();
-                                                        ui.label("EDT:");
-                                                        ui.monospace(translate_edt(prop.epc, &prop.edt));
-                                                    });
-                                                });
-                                            });
-                                        ui.add_space(6.0);
-                                    }
-                                    
-                                    if is_malformed {
+                            egui::ScrollArea::vertical()
+                                .id_salt("echonet_scroll")
+                                .show(ui, |ui| {
+                                    if entry.data.len() < 12 {
                                         ui.colored_label(
                                             egui::Color32::from_rgb(255, 100, 100),
-                                            tr("ins-el-err-malformed")
+                                            tr("ins-el-err-too-short")
                                         );
+                                    } else {
+                                        let ehd1 = entry.data[0];
+                                        let ehd2 = entry.data[1];
+                                        
+                                        if ehd1 != 0x10 {
+                                            let mut args = std::collections::HashMap::new();
+                                            args.insert(std::borrow::Cow::Borrowed("val"), format!("{:02X}", ehd1).into());
+                                            ui.colored_label(
+                                                egui::Color32::from_rgb(255, 180, 100),
+                                                tr_args("ins-el-warn-ehd1", &args)
+                                            );
+                                            ui.add_space(4.0);
+                                        }
+                                        
+                                        let tid_h = entry.data[2];
+                                        let tid_l = entry.data[3];
+                                        let seoj = &entry.data[4..7];
+                                        let deoj = &entry.data[7..10];
+                                        let esv = entry.data[10];
+                                        let opc = entry.data[11];
+                                        
+                                        // Frame structure grid
+                                        egui::Grid::new("el_inspector_grid")
+                                            .num_columns(2)
+                                            .spacing([12.0, 6.0])
+                                            .show(ui, |ui| {
+                                                ui.label(tr("ins-el-label-ehd1"));
+                                                ui.monospace(format!("0x{:02X} (ECHONET Lite)", ehd1));
+                                                ui.end_row();
+                                                
+                                                ui.label(tr("ins-el-label-ehd2"));
+                                                let fmt_str = if ehd2 == 0x81 { "1" } else { "2" };
+                                                let mut args_fmt = std::collections::HashMap::new();
+                                                args_fmt.insert(std::borrow::Cow::Borrowed("fmt"), fmt_str.into());
+                                                ui.monospace(format!("0x{:02X} ({})", ehd2, tr_args("ins-el-format", &args_fmt)));
+                                                ui.end_row();
+                                                
+                                                ui.label(tr("ins-el-label-tid"));
+                                                ui.monospace(format!("0x{:02X}{:02X}", tid_h, tid_l));
+                                                ui.end_row();
+                                                
+                                                ui.label(tr("ins-el-label-seoj"));
+                                                ui.label(translate_object(seoj, &mra_db, use_ja));
+                                                ui.end_row();
+                                                
+                                                ui.label(tr("ins-el-label-deoj"));
+                                                ui.label(translate_object(deoj, &mra_db, use_ja));
+                                                ui.end_row();
+                                                
+                                                ui.label(tr("ins-el-label-esv"));
+                                                ui.label(translate_esv(esv));
+                                                ui.end_row();
+                                                
+                                                ui.label(tr("ins-el-label-opc"));
+                                                ui.monospace(format!("{}", opc));
+                                                ui.end_row();
+                                            });
+                                        
+                                        ui.add_space(10.0);
+                                        ui.strong(tr("ins-el-title-props"));
+                                        ui.add_space(4.0);
+                                        
+                                        // Parse properties
+                                        let mut properties = Vec::new();
+                                        let mut curr_offset = 12;
+                                        let mut is_malformed = false;
+                                        
+                                        for _ in 0..opc {
+                                            if curr_offset + 2 > entry.data.len() {
+                                                is_malformed = true;
+                                                break;
+                                            }
+                                            let epc = entry.data[curr_offset];
+                                            let pdc = entry.data[curr_offset + 1];
+                                            
+                                            curr_offset += 2;
+                                            
+                                            if curr_offset + (pdc as usize) > entry.data.len() {
+                                                is_malformed = true;
+                                                break;
+                                            }
+                                            
+                                            let edt = entry.data[curr_offset..curr_offset + (pdc as usize)].to_vec();
+                                            curr_offset += pdc as usize;
+                                            
+                                            properties.push(EchonetProperty { epc, pdc, edt });
+                                        }
+                                        
+                                        // Render properties directly
+                                        for (prop_idx, prop) in properties.iter().enumerate() {
+                                            egui::Frame::NONE
+                                                .fill(ui.visuals().widgets.inactive.bg_fill)
+                                                .corner_radius(egui::CornerRadius::same(4))
+                                                .inner_margin(egui::Margin::symmetric(10, 8))
+                                                .show(ui, |ui| {
+                                                    ui.vertical(|ui| {
+                                                        ui.horizontal(|ui| {
+                                                            ui.strong(format!("#{}:", prop_idx + 1));
+                                                            ui.label("EPC:");
+                                                            ui.monospace(format!("0x{:02X}", prop.epc));
+                                                            ui.label(translate_epc(prop.epc, deoj, &mra_db, use_ja));
+                                                        });
+                                                        ui.add_space(2.0);
+                                                        ui.horizontal(|ui| {
+                                                            ui.label("PDC:");
+                                                            ui.monospace(format!("{}", prop.pdc));
+                                                            ui.separator();
+                                                            ui.label("EDT:");
+                                                            ui.monospace(translate_edt(prop.epc, &prop.edt));
+                                                        });
+                                                    });
+                                                });
+                                            ui.add_space(6.0);
+                                        }
+                                        
+                                        if is_malformed {
+                                            ui.colored_label(
+                                                egui::Color32::from_rgb(255, 100, 100),
+                                                tr("ins-el-err-malformed")
+                                            );
+                                        }
                                     }
                                 });
-                            }
                         }
                     }
                 }
