@@ -125,6 +125,7 @@ el-edt-on = ON (30)
 el-edt-off = OFF (31)
 
 el-btn-generate = ⚙ ECHONET Lite 16進データを生成して挿入
+el-btn-add-epc = + プロパティを追加
 el-err-prefix = ECHONET Lite ビルダーエラー: { $msg }
 
 # Composer Tab

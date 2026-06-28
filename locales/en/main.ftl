@@ -125,6 +125,7 @@ el-edt-on = ON (30)
 el-edt-off = OFF (31)
 
 el-btn-generate = ⚙ Generate and Insert ECHONET Lite Hex
+el-btn-add-epc = + Add Property
 el-err-prefix = ECHONET Lite builder error: { $msg }
 
 # Composer Tab

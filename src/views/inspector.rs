@@ -1,6 +1,7 @@
 use eframe::egui;
 use crate::UdpStudioState;
 use crate::types::{LogDirection, InspectorProtocol, to_hex_dump};
+use crate::mra::MraDatabase;
 
 struct EchonetProperty {
     epc: u8,
@@ -12,6 +13,8 @@ impl UdpStudioState {
     pub fn show_inspector(&mut self, ui: &mut egui::Ui) {
         crate::locales::init_translations();
         let lang_id = self.language_id();
+        let use_ja = lang_id.starts_with("ja");
+        let mra_db = self.mra_db.clone();
         let tr = |key: &str| {
             egui_i18n::set_language(&lang_id);
             egui_i18n::tr!(key)
@@ -140,11 +143,11 @@ impl UdpStudioState {
                                         ui.end_row();
                                         
                                         ui.label(tr("ins-el-label-seoj"));
-                                        ui.label(translate_object(seoj));
+                                        ui.label(translate_object(seoj, &mra_db, use_ja));
                                         ui.end_row();
                                         
                                         ui.label(tr("ins-el-label-deoj"));
-                                        ui.label(translate_object(deoj));
+                                        ui.label(translate_object(deoj, &mra_db, use_ja));
                                         ui.end_row();
                                         
                                         ui.label(tr("ins-el-label-esv"));
@@ -199,7 +202,7 @@ impl UdpStudioState {
                                                         ui.strong(format!("#{}:", prop_idx + 1));
                                                         ui.label("EPC:");
                                                         ui.monospace(format!("0x{:02X}", prop.epc));
-                                                        ui.label(translate_epc(prop.epc));
+                                                        ui.label(translate_epc(prop.epc, deoj, &mra_db, use_ja));
                                                     });
                                                     ui.add_space(2.0);
                                                     ui.horizontal(|ui| {
@@ -259,7 +262,7 @@ fn to_ascii_inspector(bytes: &[u8]) -> String {
 }
 
 // ECHONET Lite Translators
-fn translate_object(obj_bytes: &[u8]) -> String {
+fn translate_object(obj_bytes: &[u8], mra_db: &MraDatabase, use_ja: bool) -> String {
     if obj_bytes.len() != 3 {
         return egui_i18n::tr!("ins-el-obj-unknown");
     }
@@ -267,14 +270,12 @@ fn translate_object(obj_bytes: &[u8]) -> String {
     let class = obj_bytes[1];
     let instance = obj_bytes[2];
     
-    let name = match (group, class) {
-        (0x05, 0xFF) => egui_i18n::tr!("ins-el-obj-controller"),
-        (0x0E, 0xF0) => egui_i18n::tr!("ins-el-obj-node"),
-        (0x01, 0x30) => egui_i18n::tr!("ins-el-obj-ac"),
-        (0x02, 0x88) => egui_i18n::tr!("ins-el-obj-meter"),
-        _ => egui_i18n::tr!("ins-el-obj-custom"),
+    let name = if let Some(info) = mra_db.classes.get(&(group, class)) {
+        if use_ja { info.name_ja.clone() } else { info.name_en.clone() }
+    } else {
+        egui_i18n::tr!("ins-el-obj-custom")
     };
-    format!("{} (0x{:02X} {:02X} {:02X})", name, group, class, instance)
+    format!("{} (0x{:02X}{:02X} inst:{:02X})", name, group, class, instance)
 }
 
 fn translate_esv(esv: u8) -> String {
@@ -295,7 +296,18 @@ fn translate_esv(esv: u8) -> String {
     }
 }
 
-fn translate_epc(epc: u8) -> String {
+fn translate_epc(epc: u8, deoj: &[u8], mra_db: &MraDatabase, use_ja: bool) -> String {
+    // Try to look up using the DEOJ's class from MRA
+    if deoj.len() >= 2 {
+        let group = deoj[0];
+        let class = deoj[1];
+        if let Some(class_info) = mra_db.classes.get(&(group, class)) {
+            if let Some(prop) = class_info.properties.get(&epc) {
+                return if use_ja { prop.name_ja.clone() } else { prop.name_en.clone() };
+            }
+        }
+    }
+    // Fallback to hardcoded super-class properties
     match epc {
         0x80 => egui_i18n::tr!("ins-el-epc-status"),
         0x81 => egui_i18n::tr!("ins-el-epc-location"),

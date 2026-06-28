@@ -160,11 +160,10 @@ fn test_gui_triggered_communication() {
         el_tid: "0001".to_string(),
         el_seoj: "05FF01".to_string(),
         el_deoj_preset: 0,
-        el_deoj_custom: "013001".to_string(),
+        el_deoj_custom: "0EF001".to_string(),
+        el_deoj_eoj: String::new(),
         el_esv_preset: 0,
-        el_epc_preset: 0,
-        el_epc_custom: "80".to_string(),
-        el_edt: "30".to_string(),
+        el_properties: vec![udp_packet_studio::types::ElBuilderProperty { epc: "80".to_string(), edt: String::new() }],
         el_show_helper: false,
         multicast_input_addr: "224.0.23.0".to_string(),
         multicast_input_interface: "0.0.0.0".to_string(),
@@ -178,6 +177,7 @@ fn test_gui_triggered_communication() {
         about_tab: AboutTab::Info,
         tx_logger,
         language_setting: LanguageSetting::English,
+        mra_db: udp_packet_studio::mra::MraDatabase::load_empty(),
     };
 
     // Frame 1: Render the GUI to determine button layout & coordinate
@@ -323,11 +323,10 @@ fn test_collections_gui_interactions() {
         el_tid: "0001".to_string(),
         el_seoj: "05FF01".to_string(),
         el_deoj_preset: 0,
-        el_deoj_custom: "013001".to_string(),
+        el_deoj_custom: "0EF001".to_string(),
+        el_deoj_eoj: String::new(),
         el_esv_preset: 0,
-        el_epc_preset: 0,
-        el_epc_custom: "80".to_string(),
-        el_edt: "30".to_string(),
+        el_properties: vec![udp_packet_studio::types::ElBuilderProperty { epc: "80".to_string(), edt: String::new() }],
         el_show_helper: false,
         multicast_input_addr: "224.0.23.0".to_string(),
         multicast_input_interface: "0.0.0.0".to_string(),
@@ -341,6 +340,7 @@ fn test_collections_gui_interactions() {
         about_tab: AboutTab::Info,
         tx_logger,
         language_setting: LanguageSetting::English,
+        mra_db: udp_packet_studio::mra::MraDatabase::load_empty(),
     };
 
     // ----------------------------------------------------

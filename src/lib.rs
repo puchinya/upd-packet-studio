@@ -6,6 +6,8 @@ pub mod config;
 pub mod styling;
 pub mod views;
 pub mod locales;
+pub mod mra;
+pub mod mra_defs;
 
 use std::net::SocketAddr;
 use std::sync::mpsc::{Receiver, Sender, channel};
@@ -15,7 +17,7 @@ use egui_dock::{DockArea, DockState};
 use egui_dock::tab_viewer::OnCloseResponse;
 
 use udp_worker::{UdpWorker, UdpCommand, UdpEvent};
-use types::{Tab, LogEntry, LogDirection, PayloadType, parse_hex_to_bytes, Collection, MulticastGroup, InspectorProtocol, LogExportFormat, LoggerCommand, AboutTab};
+use types::{Tab, LogEntry, LogDirection, PayloadType, parse_hex_to_bytes, Collection, MulticastGroup, InspectorProtocol, LogExportFormat, LoggerCommand, AboutTab, ElBuilderProperty};
 use config::SavedConfig;
 use styling::setup_custom_styles;
 use locales::LanguageSetting;
@@ -72,10 +74,9 @@ pub struct UdpStudioState {
     pub el_seoj: String,
     pub el_deoj_preset: usize,
     pub el_deoj_custom: String,
+    pub el_deoj_eoj: String,          // resolved EOJ hex (4 chars, no 0x prefix)
     pub el_esv_preset: usize,
-    pub el_epc_preset: usize,
-    pub el_epc_custom: String,
-    pub el_edt: String,
+    pub el_properties: Vec<ElBuilderProperty>, // list of EPC+EDT rows
     pub el_show_helper: bool,
 
     // Multicast fields (UI inputs)
@@ -94,6 +95,7 @@ pub struct UdpStudioState {
     pub about_tab: AboutTab,
     pub tx_logger: Sender<LoggerCommand>,
     pub language_setting: LanguageSetting,
+    pub mra_db: mra::MraDatabase,
 }
 
 impl UdpStudioState {
@@ -746,6 +748,8 @@ impl MainApp {
             }
         });
 
+        let mra_db = mra::MraDatabase::load();
+
         let state = UdpStudioState {
             collections: config.collections,
             selected_request_id: None,
@@ -784,10 +788,9 @@ impl MainApp {
             el_seoj: "05FF01".to_string(),
             el_deoj_preset: 0,
             el_deoj_custom: "013001".to_string(),
+            el_deoj_eoj: "0130".to_string(),
             el_esv_preset: 0,
-            el_epc_preset: 0,
-            el_epc_custom: "80".to_string(),
-            el_edt: "30".to_string(),
+            el_properties: vec![ElBuilderProperty { epc: "80".to_string(), edt: String::new() }],
             el_show_helper: false,
             multicast_input_addr: "224.0.23.0".to_string(),
             multicast_input_interface: "0.0.0.0".to_string(),
@@ -801,6 +804,7 @@ impl MainApp {
             about_tab: AboutTab::Info,
             tx_logger,
             language_setting: config.language_setting,
+            mra_db,
         };
 
         Self {

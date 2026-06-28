@@ -170,6 +170,12 @@ impl LogEntry {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ElBuilderProperty {
+    pub epc: String,
+    pub edt: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SocketConfig {
     pub id: String,
     pub name: String,
