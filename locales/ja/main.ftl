@@ -167,10 +167,10 @@ log-save-fail = ログの保存に失敗しました: { $msg }
 # Inspector Panel
 ins-label-timestamp = タイムスタンプ: { $ts }
 ins-label-sent-to = 送信先:
-ins-label-received-from = 受信元:
+ins-label-received-from = 送信元:
 ins-label-event-target = イベント対象:
 ins-label-error-target = エラー対象:
-ins-label-size = サイズ: { $len } バイト
+ins-label-size = データ長: { $len } B
 ins-label-decode-as = プロトコル解析:
 ins-proto-raw = 🔌 Raw (16進数)
 ins-proto-ascii = 📝 テキスト (ASCII)

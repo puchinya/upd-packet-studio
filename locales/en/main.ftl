@@ -167,10 +167,10 @@ log-save-fail = Failed to save logs: { $msg }
 # Inspector Panel
 ins-label-timestamp = Timestamp: { $ts }
 ins-label-sent-to = Sent To:
-ins-label-received-from = Received From:
+ins-label-received-from = Source:
 ins-label-event-target = Event target:
 ins-label-error-target = Error target:
-ins-label-size = Size: { $len } bytes
+ins-label-size = Length: { $len } B
 ins-label-decode-as = Decode As:
 ins-proto-raw = 🔌 Raw (Hex)
 ins-proto-ascii = 📝 Text (ASCII)
