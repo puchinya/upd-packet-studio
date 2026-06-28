@@ -3,15 +3,9 @@ use std::path::Path;
 use crate::mra_defs::{RawMraClass, PropertyInfo, ClassInfo};
 
 #[derive(serde::Deserialize)]
-struct RawDefinitionEnum {
-    edt: String,
-    descriptions: Option<crate::mra_defs::RawMraLocalizedString>,
-}
-
-#[derive(serde::Deserialize)]
 struct RawDefinition {
     #[serde(rename = "enum")]
-    def_enum: Option<Vec<RawDefinitionEnum>>,
+    def_enum: Option<Vec<serde_json::Value>>,
 }
 
 #[derive(serde::Deserialize)]
@@ -95,13 +89,27 @@ impl MraDatabase {
                 for (def_name, def) in raw_file.definitions {
                     if let Some(enums) = def.def_enum {
                         let mut candidates = Vec::new();
-                        for e in enums {
-                            let hex = e.edt.trim_start_matches("0x").to_string();
-                            let name_ja = e.descriptions.as_ref().map(|d| d.ja.clone()).unwrap_or_default();
-                            let name_en = e.descriptions.as_ref().map(|d| d.en.clone()).unwrap_or_default();
-                            candidates.push((hex, name_ja, name_en));
+                        for item in enums {
+                            if let Some(item_obj) = item.as_object() {
+                                if let Some(edt) = item_obj.get("edt").and_then(|e| e.as_str()) {
+                                    let hex = edt.trim_start_matches("0x").to_string();
+                                    let name_ja = item_obj.get("descriptions")
+                                        .and_then(|d| d.get("ja"))
+                                        .and_then(|v| v.as_str())
+                                        .unwrap_or_default()
+                                        .to_string();
+                                    let name_en = item_obj.get("descriptions")
+                                        .and_then(|d| d.get("en"))
+                                        .and_then(|v| v.as_str())
+                                        .unwrap_or_default()
+                                        .to_string();
+                                    candidates.push((hex, name_ja, name_en));
+                                }
+                            }
                         }
-                        defs_map.insert(def_name, candidates);
+                        if !candidates.is_empty() {
+                            defs_map.insert(def_name, candidates);
+                        }
                     }
                 }
             }
