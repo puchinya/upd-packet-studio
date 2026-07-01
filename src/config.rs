@@ -1,4 +1,4 @@
-use crate::types::{Collection, PacketDefinition, PayloadType, LogExportFormat, SocketConfig};
+use crate::types::{Collection, PacketDefinition, PayloadType, LogExportFormat, SocketConfig, AppTheme};
 use serde::{Serialize, Deserialize};
 use crate::locales::LanguageSetting;
 
@@ -142,6 +142,8 @@ pub struct SavedConfig {
     pub max_log_lines: usize,
     #[serde(default)]
     pub dock_state: Option<String>,
+    #[serde(default)]
+    pub theme: AppTheme,
 }
 
 fn config_path() -> Option<std::path::PathBuf> {
@@ -176,6 +178,7 @@ impl Default for SavedConfig {
             max_display_data_bytes: 128,
             max_log_lines: 10000,
             dock_state: None,
+            theme: AppTheme::System,
         }
     }
 }

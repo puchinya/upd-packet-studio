@@ -408,4 +408,3 @@ fn test_udp_worker_unreachable_port_continuation() {
     assert!(got_received, "Socket should still be receiving packets after an unreachable target send");
 }
 
-

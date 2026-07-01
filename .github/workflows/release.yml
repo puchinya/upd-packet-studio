@@ -25,7 +25,13 @@ jobs:
       - name: Compress Release
         shell: pwsh
         run: |
-          Compress-Archive -Path target/release/udp-packet-studio.exe, README.md, LICENSE.md -DestinationPath udp-packet-studio-windows.zip
+          mkdir staging
+          cp target/release/udp-packet-studio.exe staging/
+          cp README.md staging/
+          cp LICENSE.md staging/
+          cp -Recurse assets staging/assets
+          Compress-Archive -Path staging/* -DestinationPath udp-packet-studio-windows.zip
+
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4

@@ -384,3 +384,17 @@ pub enum AboutTab {
     ThirdParty,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum AppTheme {
+    System,
+    Light,
+    Dark,
+}
+
+impl Default for AppTheme {
+    fn default() -> Self {
+        AppTheme::System
+    }
+}
+
+

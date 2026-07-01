@@ -18,9 +18,9 @@ use egui_dock::{DockArea, DockState};
 use egui_dock::tab_viewer::OnCloseResponse;
 
 use udp_worker::{UdpWorker, UdpCommand, UdpEvent};
-use types::{Tab, LogEntry, LogDirection, PayloadType, parse_hex_to_bytes, Collection, MulticastGroup, InspectorProtocol, LogExportFormat, LoggerCommand, AboutTab, ElBuilderProperty};
+use types::{Tab, LogEntry, LogDirection, PayloadType, parse_hex_to_bytes, Collection, MulticastGroup, InspectorProtocol, LogExportFormat, LoggerCommand, AboutTab, ElBuilderProperty, AppTheme};
 use config::SavedConfig;
-use styling::setup_custom_styles;
+use styling::{setup_custom_styles, apply_theme};
 use locales::LanguageSetting;
 
 pub fn get_local_interfaces() -> Vec<(String, String)> {
@@ -100,6 +100,7 @@ pub struct UdpStudioState {
     pub about_tab: AboutTab,
     pub tx_logger: Sender<LoggerCommand>,
     pub language_setting: LanguageSetting,
+    pub theme: AppTheme,
     pub mra_db: mra::MraDatabase,
     pub dock_state_serialized: Option<String>,
     pub reset_layout_requested: bool,
@@ -141,6 +142,7 @@ impl UdpStudioState {
         self.auto_save_dir = def.auto_save_dir;
         self.auto_save_format = def.auto_save_format;
         self.language_setting = def.language_setting;
+        self.theme = def.theme;
         self.max_display_data_bytes = def.max_display_data_bytes;
         self.max_log_lines = def.max_log_lines;
         self.enforce_log_limits();
@@ -233,6 +235,7 @@ impl UdpStudioState {
                 auto_save_dir: self.auto_save_dir.clone(),
                 auto_save_format: self.auto_save_format,
                 language_setting: self.language_setting,
+                theme: self.theme,
                 max_display_data_bytes: self.max_display_data_bytes,
                 max_log_lines: self.max_log_lines,
                 dock_state: self.dock_state_serialized.clone(),
@@ -625,13 +628,13 @@ struct MainApp {
     dock_state: DockState<Tab>,
     state: UdpStudioState,
     was_focused: bool,
+    last_applied_theme: Option<AppTheme>,
 }
 
 impl MainApp {
     fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        setup_custom_styles(&cc.egui_ctx);
-        
         let config = SavedConfig::load();
+        setup_custom_styles(&cc.egui_ctx, config.theme);
         
         // Try to restore docking layout from config
         let mut dock_state = None;
@@ -902,6 +905,7 @@ impl MainApp {
             about_tab: AboutTab::Info,
             tx_logger,
             language_setting: config.language_setting,
+            theme: config.theme,
             mra_db,
             dock_state_serialized: config.dock_state.clone(),
             reset_layout_requested: false,
@@ -911,6 +915,7 @@ impl MainApp {
             dock_state,
             state,
             was_focused: true,
+            last_applied_theme: None,
         }
     }
 }
@@ -1014,6 +1019,22 @@ fn circle_button(
 
 impl eframe::App for MainApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        let desired_theme = self.state.theme;
+        let actual_theme = match desired_theme {
+            AppTheme::System => {
+                match ui.ctx().theme() {
+                    egui::Theme::Dark => AppTheme::Dark,
+                    egui::Theme::Light => AppTheme::Light,
+                }
+            }
+            t => t,
+        };
+
+        if self.last_applied_theme != Some(actual_theme) {
+            apply_theme(ui.ctx(), desired_theme);
+            self.last_applied_theme = Some(actual_theme);
+        }
+
         if self.state.reset_layout_requested {
             self.state.reset_layout_requested = false;
 
@@ -1472,6 +1493,17 @@ impl eframe::App for MainApp {
             let ja_display = LanguageSetting::Japanese.to_display_name();
             let en_display = LanguageSetting::English.to_display_name();
             
+            let theme_section = self.state.tr("settings-theme-section");
+            let theme_label = self.state.tr("settings-theme-label");
+            let selected_theme_text = match self.state.theme {
+                AppTheme::System => self.state.tr("settings-theme-system"),
+                AppTheme::Light => self.state.tr("settings-theme-light"),
+                AppTheme::Dark => self.state.tr("settings-theme-dark"),
+            };
+            let theme_system_display = self.state.tr("settings-theme-system");
+            let theme_light_display = self.state.tr("settings-theme-light");
+            let theme_dark_display = self.state.tr("settings-theme-dark");
+            
             let auto_save_section = self.state.tr("settings-auto-save-section");
             let auto_save_enable = self.state.tr("settings-auto-save-enable");
             let auto_save_format_label = self.state.tr("settings-auto-save-format");
@@ -1508,6 +1540,29 @@ impl eframe::App for MainApp {
                                     changed
                                 });
                             if combo_lang_res.inner.unwrap_or(false) {
+                                self.state.save_config();
+                            }
+                        });
+                        
+                        ui.add_space(8.0);
+                        
+                        // Theme Settings
+                        ui.heading(theme_section);
+                        ui.add_space(4.0);
+                        
+                        ui.horizontal(|ui| {
+                            ui.label(theme_label);
+                            
+                            let combo_theme_res = egui::ComboBox::from_id_salt("settings_theme")
+                                .selected_text(selected_theme_text)
+                                .show_ui(ui, |ui| {
+                                    let mut changed = false;
+                                    changed |= ui.selectable_value(&mut self.state.theme, AppTheme::System, theme_system_display).changed();
+                                    changed |= ui.selectable_value(&mut self.state.theme, AppTheme::Light, theme_light_display).changed();
+                                    changed |= ui.selectable_value(&mut self.state.theme, AppTheme::Dark, theme_dark_display).changed();
+                                    changed
+                                });
+                            if combo_theme_res.inner.unwrap_or(false) {
                                 self.state.save_config();
                             }
                         });

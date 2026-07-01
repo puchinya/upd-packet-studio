@@ -25,6 +25,10 @@ echo "Copying binary..."
 cp "${BINARY_PATH}" "${MACOS_DIR}/${APP_NAME}"
 chmod +x "${MACOS_DIR}/${APP_NAME}"
 
+echo "Copying assets..."
+cp -R assets "${RESOURCES_DIR}/"
+
+
 # Handle Icon file if it exists
 HAS_ICON=false
 # Search for icon.icns in project root or scripts directory

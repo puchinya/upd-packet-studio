@@ -67,6 +67,25 @@ pub struct MraDatabase {
 }
 
 impl MraDatabase {
+    fn get_mra_path() -> std::path::PathBuf {
+        if let Ok(exe_path) = std::env::current_exe() {
+            if let Some(exe_dir) = exe_path.parent() {
+                // macOS App Bundle inside Contents/MacOS
+                let bundle_path = exe_dir.join("../Resources/assets/mra/MRA_v1.4.0");
+                if bundle_path.exists() {
+                    return bundle_path;
+                }
+                // Sibling to executable (Windows or standalone release)
+                let sibling_path = exe_dir.join("assets/mra/MRA_v1.4.0");
+                if sibling_path.exists() {
+                    return sibling_path;
+                }
+            }
+        }
+        // Fallback for development (cargo run / current dir)
+        std::path::PathBuf::from("assets/mra/MRA_v1.4.0")
+    }
+
     pub fn load_empty() -> Self {
         Self { classes: HashMap::new() }
     }
@@ -76,7 +95,7 @@ impl MraDatabase {
             classes: HashMap::new(),
         };
         
-        let base_path = Path::new("assets/mra/MRA_v1.4.0");
+        let base_path = Self::get_mra_path();
         if !base_path.exists() {
             return db;
         }

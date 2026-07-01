@@ -124,6 +124,7 @@ fn test_gui_triggered_communication() {
 
     // Construct the state with test values
     let mut state = UdpStudioState {
+        theme: udp_packet_studio::types::AppTheme::System,
         collections: Vec::new(),
         selected_request_id: None,
         composer_selected_collection_idx: 0,
@@ -293,6 +294,7 @@ fn test_collections_gui_interactions() {
 
     // Construct the state with test values
     let mut state = UdpStudioState {
+        theme: udp_packet_studio::types::AppTheme::System,
         collections: vec![test_col],
         selected_request_id: Some(test_req_id.clone()),
         composer_selected_collection_idx: 0,
@@ -548,6 +550,7 @@ fn test_log_limit_and_truncation_gui() {
     let (tx_logger, _rx_logger) = channel::<LoggerCommand>();
 
     let mut state = UdpStudioState {
+        theme: udp_packet_studio::types::AppTheme::System,
         collections: Vec::new(),
         selected_request_id: None,
         composer_selected_collection_idx: 0,

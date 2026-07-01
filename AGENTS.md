@@ -121,7 +121,19 @@ To maintain visual consistency and support various OS/font configurations (espec
 - **For emojis without monochrome glyphs:**
   - Replace them with clean monochrome text symbols (e.g., replace `🟢` and `🔴` with `●`, and replace `➕` with `+`).
 
+### 4.4 Theme Support Guidelines (ライト・ダークテーマとシステム設定のガイドライン)
+- **テーマ設定の種類**: アプリケーションは「システム設定 (System)」「ライト (Light)」「ダーク (Dark)」の3つのテーマ設定をサポートします。デフォルトは「システム設定」です。
+- **システム設定時の挙動**: ユーザーが「システム設定」を選択している場合、OS側の外観モード設定（ライト/ダーク）の変更を検知し、アプリケーションのテーマを動的に追従させて切り替える必要があります。
+- **テーマ設定の適用ルール**: 
+  - フォントやテキストスタイルなどの共通設定は初期化時（`MainApp::new`）にのみ実行します。
+  - カラーテーマ（Visuals）の設定のみを `styling::apply_theme(ctx, theme)` として分離し、設定変更時やシステムテーマ変更時に動的に再適用できるようにします。
+  - `MainApp` 構造体内に `last_applied_theme: Option<AppTheme>` フィールドを保持し、毎フレームの監視処理における不要なテーマ再適用処理（Visualsのオーバーヘッド）を防止します。
+- **ライトテーマの配色方針**:
+  - `egui::Visuals::light()` をベースとしつつ、ダークテーマのトーンと調和するプレミアムなスレートライト（`#F5F7FA` 付近）の配色とします。
+  - 選択やフォーカスのアクセントカラー（インディゴ系 `#4F6EF2` など）は、視認性を維持しつつダークテーマと一貫性を持たせます。
+
 ---
+
 
 
 ## 📂 5. File Splitting & Code Organization
